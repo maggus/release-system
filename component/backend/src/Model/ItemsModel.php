@@ -155,7 +155,7 @@ class ItemsModel extends ListModel
 	public function getReleases(): array
 	{
 		$db    = $this->getDatabase();
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select([
 				$db->quoteName('c.title', 'cat_title'),
 				$db->quoteName('r.id', 'value'),
@@ -221,7 +221,7 @@ class ItemsModel extends ListModel
 	protected function getListQuery()
 	{
 		$db    = $this->getDatabase();
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select([
 				$db->quoteName('i') . '.*',
 				$db->quoteName('r.version', 'version'),

@@ -29,7 +29,7 @@ class ControlpanelModel extends BaseDatabaseModel
 	{
 		$db = $this->getDatabase();
 
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select('COUNT(id)')
 			->from('#__menu')
 			->where($db->qn('link') . ' = ' . $db->q('index.php?option=com_ars&view=categories&layout=repository'))
@@ -122,7 +122,7 @@ class ControlpanelModel extends BaseDatabaseModel
 				break;
 		}
 
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select('COUNT(*)')
 			->from($db->qn('#__ars_log') . ' AS ' . $db->qn('l'))
 			->where($db->qn('l') . '.' . $db->qn('authorized') . ' = ' . $db->q(1));
@@ -150,7 +150,7 @@ class ControlpanelModel extends BaseDatabaseModel
 		$last_month = clone Factory::getDate();
 		$last_month->sub(new DateInterval('P35D'));
 
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select([
 				'DATE(' . $db->qn('accessed_on') . ') AS ' . $db->qn('day'),
 				'COUNT(*) AS ' . $db->qn('dl'),

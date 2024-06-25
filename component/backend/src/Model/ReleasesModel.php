@@ -105,7 +105,7 @@ class ReleasesModel extends ListModel
 	public function getCategories(): array
 	{
 		$db    = $this->getDatabase();
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select([
 				$db->quoteName('id', 'value'),
 				$db->quoteName('title', 'text'),
@@ -156,7 +156,7 @@ class ReleasesModel extends ListModel
 		$ret = array_unique($ret);
 
 		$db     = $this->getDatabase();
-		$query  = $db->getQuery(true)
+		$query  = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select($db->quoteName('title'))
 			->from($db->quoteName('#__ars_environments'))
 			->whereIn($db->quoteName('id'), $ret);
@@ -180,7 +180,7 @@ class ReleasesModel extends ListModel
 	protected function getListQuery()
 	{
 		$db    = $this->getDatabase();
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select([
 				$db->quoteName('r') . '.*',
 				$db->quoteName('c.title', 'cat_title'),
@@ -320,7 +320,7 @@ class ReleasesModel extends ListModel
 
 		if ($latest === true)
 		{
-			$latestIDsQuery = $db->getQuery(true)
+			$latestIDsQuery = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 				->select($db->qn('r1.id'))
 				->from($db->qn('#__ars_releases') . ' AS ' . $db->qn('r1'))
 				->leftJoin($db->qn('#__ars_releases') . ' AS ' . $db->qn('r2') . ' ON (' .

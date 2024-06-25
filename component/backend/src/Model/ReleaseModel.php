@@ -308,7 +308,7 @@ class ReleaseModel extends AdminModel
 
 		// Make sure there are no items under this releases
 		$db    = $this->getDatabase();
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select('COUNT(*)')
 			->from($db->quoteName('#__ars_items'))
 			->where($db->quoteName('release_id') . ' = :release_id')

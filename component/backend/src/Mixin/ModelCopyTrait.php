@@ -126,7 +126,7 @@ trait ModelCopyTrait
 
 		$table = $this->getTable();
 		$db    = Factory::getDbo();
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select('*')
 			->from($db->quoteName($table->getTableName()));
 

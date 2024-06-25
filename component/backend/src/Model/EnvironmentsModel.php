@@ -41,7 +41,7 @@ class EnvironmentsModel extends ListModel
 	public function getEnvironmentTitles(): array
 	{
 		$db = $this->getDatabase();
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select([
 				$db->quoteName('id'),
 				$db->quoteName('title'),
@@ -59,7 +59,7 @@ class EnvironmentsModel extends ListModel
 	public function getEnvironmentXMLTitles(): array
 	{
 		$db = $this->getDatabase();
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select([
 				$db->quoteName('id'),
 				$db->quoteName('xmltitle'),
@@ -90,7 +90,7 @@ class EnvironmentsModel extends ListModel
 	protected function getListQuery()
 	{
 		$db    = $this->getDatabase();
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select([
 				$db->quoteName('a') . '.*',
 			])

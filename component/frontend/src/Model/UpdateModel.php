@@ -19,7 +19,7 @@ class UpdateModel extends BaseDatabaseModel
 	{
 		$db = $this->getDatabase();
 
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select(array(
 				$db->quoteName('u') . '.*',
 				$db->quoteName('i.id', 'item_id'),
@@ -81,7 +81,7 @@ class UpdateModel extends BaseDatabaseModel
 	{
 		$db = $this->getDatabase();
 
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select(array(
 				$db->quoteName('u') . '.*',
 				$db->quoteName('i.id', 'item_id'),
@@ -141,7 +141,7 @@ class UpdateModel extends BaseDatabaseModel
 	{
 		$db = $this->getDatabase();
 
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select($db->quoteName('published'))
 			->from($db->quoteName('#__ars_updatestreams'))
 			->where($db->quoteName('id') . ' = :id')
@@ -156,7 +156,7 @@ class UpdateModel extends BaseDatabaseModel
 	public function getCategoryAliasForUpdateId($id): ?string
 	{
 		$db = $this->getDatabase();
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select($db->quoteName('c.alias'))
 			->from($db->quoteName('#__ars_updatestreams', 'u'))
 			->join('LEFT', $db->quoteName('#__ars_categories', 'c'),

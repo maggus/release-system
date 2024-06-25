@@ -56,7 +56,7 @@ class MigrateLinks implements DatabaseAwareInterface
 		$db = $this->getDatabase();
 
 		// get affected menu items
-		$query     = $db->getQuery(true)
+		$query     = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select($db->qn(['m.id', 'm.link', 'm.params']))
 			->from($db->qn('#__menu') . ' AS m')
 			->join(
@@ -151,7 +151,7 @@ class MigrateLinks implements DatabaseAwareInterface
 			}
 
 			// write updated data back to menu table
-			$query = $db->getQuery(true)
+			$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 				->update($db->qn('#__menu'))
 				->set($db->qn('link') . ' = ' . $db->q($uri->toString()))
 				->set($db->qn('params') . ' = ' . $db->q(json_encode($params)))

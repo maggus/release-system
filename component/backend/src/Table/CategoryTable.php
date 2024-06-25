@@ -98,7 +98,7 @@ class CategoryTable extends AbstractTable
 
 		// Check alias for uniqueness
 		$db    = $this->getDbo();
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select($db->quoteName('alias'))
 			->from($db->quoteName('#__ars_categories'));
 

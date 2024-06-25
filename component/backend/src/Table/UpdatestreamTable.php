@@ -63,7 +63,7 @@ class UpdatestreamTable extends AbstractTable
 
 		// Check alias for uniqueness
 		$db    = $this->getDBO();
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select($db->qn('alias'))
 			->from($db->qn('#__ars_updatestreams'));
 

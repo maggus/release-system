@@ -84,7 +84,7 @@ class DlidlabelsModel extends ListModel
 		$isSite = $app->isClient('site');
 
 		$db    = $this->getDatabase();
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select([
 				$db->quoteName('i') . '.*',
 				$db->quoteName('u.name'),

@@ -105,7 +105,7 @@ class ItemTable extends AbstractTable
 
 		// Get the title and aliases of other items in the same release
 		$db    = $this->getDbo();
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select([
 				$db->qn('title'),
 				$db->qn('alias'),
@@ -248,12 +248,12 @@ class ItemTable extends AbstractTable
 		// Get the applicable automatic description records matching the release's category
 		$db = $this->getDbo();
 
-		$subQuery = $db->getQuery(true)
+		$subQuery = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select($db->quoteName('category_id'))
 			->from($db->quoteName('#__ars_releases'))
 			->where($db->quoteName('id') . ' = ' . $db->q($this->release_id));
 
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select('*')
 			->from($db->quoteName('#__ars_autoitemdesc'))
 			->where($db->quoteName('category') . ' IN (' . $subQuery . ')')
@@ -321,12 +321,12 @@ class ItemTable extends AbstractTable
 	{
 		$db = $this->getDBO();
 
-		$subquery = $db->getQuery(true)
+		$subquery = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select($db->quoteName('category_id'))
 			->from('#__ars_releases')
 			->where($db->quoteName('id') . ' = ' . $db->quote($this->release_id));
 
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select('*')
 			->from($db->quoteName('#__ars_updatestreams'))
 			->where($db->quoteName('category') . ' IN (' . $subquery . ')');

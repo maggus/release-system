@@ -176,7 +176,7 @@ class CategoryModel extends AdminModel
 
 		// Make sure there are no releases under this category
 		$db    = $this->getDatabase();
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select('COUNT(*)')
 			->from($db->quoteName('#__ars_releases'))
 			->where($db->quoteName('category_id') . ' = :cat_id')

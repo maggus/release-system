@@ -44,7 +44,7 @@ class ArsItemsField extends GroupedlistField
 
 
 		$db    = Factory::getContainer()->get(DatabaseInterface::class);
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select([
 				$db->qn('i.id'),
 				$db->qn('i.title'),

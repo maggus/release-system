@@ -24,7 +24,7 @@ class DlidlabelsModel extends \Akeeba\Component\ARS\Administrator\Model\Dlidlabe
 		}
 
 		$db = $this->getDatabase();
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select('*')
 			->from($db->quoteName('#__ars_dlidlabels'))
 			->where($db->quoteName('user_id') . ' = :user_id')

@@ -82,7 +82,7 @@ class ReleaseTable extends AbstractTable
 
 		// Check alias for uniqueness
 		$db    = $this->getDbo();
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select([
 				$db->quoteName('alias'),
 				$db->quoteName('version'),

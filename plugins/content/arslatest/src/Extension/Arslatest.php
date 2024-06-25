@@ -316,7 +316,7 @@ class Arslatest extends CMSPlugin implements SubscriberInterface, DatabaseAwareI
 		$xmltitleMatches = '%' . trim($xmltitleMatches, '%') . '%';
 
 		$db    = $this->getDatabase();
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select($db->quoteName('id'))
 			->from($db->quoteName('#__ars_environments'))
 			->where($db->quoteName('xmltitle') . ' LIKE :search')

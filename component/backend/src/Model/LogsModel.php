@@ -144,7 +144,7 @@ class LogsModel extends ListModel
 	protected function getListQuery()
 	{
 		$db    = $this->getDatabase();
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select([
 				$db->quoteName('l') . '.*',
 				$db->quoteName('i.id', 'item_id'),

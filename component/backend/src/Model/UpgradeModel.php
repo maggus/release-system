@@ -307,7 +307,7 @@ class UpgradeModel extends BaseModel implements DatabaseAwareInterface
 		}
 
 		$db    = $this->getDatabase();
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select($db->quoteName('extension_id'))
 			->from($db->quoteName('#__extensions'));
 
@@ -379,7 +379,7 @@ class UpgradeModel extends BaseModel implements DatabaseAwareInterface
 
 		// Reassign all extensions
 		$db    = $this->getDatabase();
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->update($db->quoteName('#__extensions'))
 			->set($db->qn('package_id') . ' = :package_id')
 			->whereIn($db->qn('extension_id'), $extensionIDs, ParameterType::INTEGER)
@@ -450,7 +450,7 @@ class UpgradeModel extends BaseModel implements DatabaseAwareInterface
 		}
 
 		$db    = $this->getDatabase();
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->update($db->quoteName('#__extensions'))
 			->set($db->qn('enabled') . ' = 1')
 			->whereIn($db->quoteName('extension_id'), $extensionIDs);
@@ -685,7 +685,7 @@ class UpgradeModel extends BaseModel implements DatabaseAwareInterface
 
 		// Reassign all extensions
 		$db    = $this->getDatabase();
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->update($db->quoteName('#__extensions'))
 			->set($db->qn('package_id') . ' = :package_id')
 			->whereIn($db->qn('extension_id'), $extensionIDs, ParameterType::INTEGER)
@@ -716,7 +716,7 @@ class UpgradeModel extends BaseModel implements DatabaseAwareInterface
 		// Get the existing list of extensions dependent on the specified version of FOF.
 		$keyName = 'fof' . $fofVersion . '0';
 		$db      = $this->getDatabase();
-		$query   = $db->getQuery(true)
+		$query   = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select($db->quoteName('value'))
 			->from($db->quoteName('#__akeeba_common'))
 			->where($db->quoteName('key') . ' = :keyName')
@@ -742,7 +742,7 @@ class UpgradeModel extends BaseModel implements DatabaseAwareInterface
 		$json = json_encode($list);
 
 		// Update the #__akeeba_common table.
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->update($db->quoteName('#__akeeba_common'))
 			->set($db->quoteName('value') . ' = :json')
 			->where($db->quoteName('key') . ' = :keyName')
@@ -1193,7 +1193,7 @@ class UpgradeModel extends BaseModel implements DatabaseAwareInterface
 	private function removeExtensionPackageLink(int $eid): void
 	{
 		$db    = $this->getDatabase();
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->update($db->quoteName('#__extensions'))
 			->set($db->quoteName('package_id') . ' = 0')
 			->where($db->quoteName('extension_id') . ' = :eid')

@@ -1,4 +1,8 @@
 <?php die(); ?>
+Akeeba Release System 7.3.3
+================================================================================
+~ Support for Joomla! 5.1's createQuery method in the db object
+
 Akeeba Release System 7.3.2
 ================================================================================
 # [HIGH] Can't edit Automatic Item Descriptions

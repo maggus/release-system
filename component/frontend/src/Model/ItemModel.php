@@ -443,7 +443,7 @@ class ItemModel extends BaseDatabaseModel
 
 		$isPrimary = empty($user_id) ? 1 : 0;
 		$db        = $this->getDatabase();
-		$query     = $db->getQuery(true)
+		$query     = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select('*')
 			->from($db->quoteName('#__ars_dlidlabels'))
 			->where($db->quoteName('dlid') . ' = :dlid')

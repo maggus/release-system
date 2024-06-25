@@ -239,7 +239,7 @@ class Pkg_ArsInstallerScript extends \Joomla\CMS\Installer\InstallerScript
 	{
 		$position = 'cpanel-' . $dashboard;
 		$db       = Factory::getContainer()->get(DatabaseInterface::class);
-		$query    = $db->getQuery(true)
+		$query    = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 		               ->select('COUNT(*)')
 		               ->from($db->quoteName('#__modules'))
 		               ->where([
@@ -298,7 +298,7 @@ class Pkg_ArsInstallerScript extends \Joomla\CMS\Installer\InstallerScript
 	private function removeOldUpdateSites()
 	{
 		$db    = $this->dbo;
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->delete($db->qn('#__update_sites'))
 			->where($db->qn('location') . ' = ' . $db->q('https://raw.githubusercontent.com/akeeba/release-system/master/update/pkg_ars_updates.xml'));
 		try

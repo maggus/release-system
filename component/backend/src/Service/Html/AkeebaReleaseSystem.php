@@ -95,7 +95,7 @@ class AkeebaReleaseSystem
 
 		/** @var DatabaseDriver $db */
 		$db    = Factory::getContainer()->get(DatabaseInterface::class);
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select($db->quoteName('dlid'))
 			->from($db->quoteName('#__ars_dlidlabels'))
 			->where($db->quoteName('user_id') . ' = :user_id')

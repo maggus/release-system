@@ -85,7 +85,7 @@ class BleedingedgeModel extends BaseDatabaseModel
 		$known_folders = [];
 
 		$db    = $this->getDatabase();
-		$query = $db->getQuery(true)
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select('*')
 			->from($db->quoteName('#__ars_releases'))
 			->where($db->quoteName('category_id') . ' = :catid')
@@ -371,7 +371,7 @@ class BleedingedgeModel extends BaseDatabaseModel
 		// Get the items
 		$db         = $this->getDatabase();
 		$release_id = $release->id;
-		$query      = $db->getQuery(true)
+		$query      = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select('*')
 			->from($db->quoteName('#__ars_items'))
 			->where($db->quoteName('release_id') . ' = :relid')
@@ -647,7 +647,7 @@ class BleedingedgeModel extends BaseDatabaseModel
 		// Get the items
 		$db         = $this->getDatabase();
 		$release_id = $release->id;
-		$query      = $db->getQuery(true)
+		$query      = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 			->select('*')
 			->from($db->quoteName('#__ars_items'))
 			->where($db->quoteName('release_id') . ' = :relid')
@@ -673,7 +673,7 @@ class BleedingedgeModel extends BaseDatabaseModel
 				return $item->getId();
 			}, $items);
 
-			$query = $db->getQuery(true)
+			$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
 				->delete($db->quoteName('#__ars_log'))
 				->whereIn($db->quoteName('item_id'), $itemIds);
 			$db->setQuery($query)->execute();
