@@ -2,6 +2,7 @@
 Akeeba Release System 7.3.3
 ================================================================================
 ~ Support for Joomla! 5.1's createQuery method in the db object
+~ Workaround for Joomla! 5.1 CSS in alert DIVs
 
 Akeeba Release System 7.3.2
 ================================================================================

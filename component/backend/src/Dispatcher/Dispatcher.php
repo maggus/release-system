@@ -105,6 +105,10 @@ class Dispatcher extends ComponentDispatcher
 		$document->getWebAssetManager()
 			->usePreset('com_ars.backend');
 
+		if (version_compare(JVERSION, '4.99999.99999', 'gt')) {
+			$document->getWebAssetManager()
+				->useStyle('com_ars.j5');
+		}
 	}
 
 	protected function applyViewAndController(): void

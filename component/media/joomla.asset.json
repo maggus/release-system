@@ -13,6 +13,13 @@
 		},
 
 		{
+			"name": "com_ars.j5",
+			"description": "Common backend user interface CSS for Joomla! 5",
+			"type": "style",
+			"uri": "com_ars/j5.css"
+		},
+
+		{
 			"name": "com_ars.frontend_light",
 			"description": "Common frontend user interface CSS, light mode",
 			"type": "style",

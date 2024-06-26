@@ -74,6 +74,11 @@ class Dispatcher extends AbstractModuleDispatcher
 				->usePreset('com_ars.backend')
 				->useScript('com_ars.controlpanel');
 
+			if (version_compare(JVERSION, '4.99999.99999', 'gt')) {
+				$document->getWebAssetManager()
+					->useStyle('com_ars.j5');
+			}
+
 			// Add the graph information to the document
 			$monthlyDailyReport = $this->getMonthlyDailyReport();
 			$document
