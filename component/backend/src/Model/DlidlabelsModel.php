@@ -21,9 +21,11 @@ class DlidlabelsModel extends ListModel
 	{
 		if (empty($config['filter_fields']))
 		{
+			// Note: misleadingly named, the filter_fields must also include the sort by fields.
 			$config['filter_fields'] = [
 				'search',
 				'id', 'i.id',
+				'title', 'i.title',
 				'user_id', 'i.user_id',
 				'dlid', 'i.dlid',
 				'primary', 'i.primary',
@@ -84,15 +86,30 @@ class DlidlabelsModel extends ListModel
 		$isSite = $app->isClient('site');
 
 		$db    = $this->getDatabase();
-		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
-			->select([
-				$db->quoteName('i') . '.*',
-				$db->quoteName('u.name'),
-				$db->quoteName('u.username'),
-				$db->quoteName('u.email'),
-			])
-			->from($db->qn('#__ars_dlidlabels', 'i'))
-			->join('LEFT', $db->qn('#__users', 'u'), $db->quoteName('u.id') . ' = ' . $db->quoteName('i.user_id'));
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true));
+
+		if ($isSite)
+		{
+			// We don't need the user information in the frontend where we display a single user's IDs.
+			$query
+				->select('*')
+				->from($db->qn('#__ars_dlidlabels', 'i'));
+		}
+		else
+		{
+			// In the backend I need to join with the users table to get the user data as well.
+			$query
+				->select(
+					[
+						$db->quoteName('i') . '.*',
+						$db->quoteName('u.name'),
+						$db->quoteName('u.username'),
+						$db->quoteName('u.email'),
+					]
+				)
+				->from($db->qn('#__ars_dlidlabels', 'i'))
+				->join('LEFT', $db->qn('#__users', 'u'), $db->quoteName('u.id') . ' = ' . $db->quoteName('i.user_id'));
+		}
 
 		// Get the filter states up first
 		$search    = $this->getState('filter.search');
