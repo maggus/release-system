@@ -121,7 +121,7 @@ class DlidlabelTable extends AbstractTable
 	{
 		while (true)
 		{
-			$this->dlid = md5(random_bytes(64));
+			$this->dlid = hash('md5', random_bytes(64));
 
 			// Do I have another primary?
 			$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))

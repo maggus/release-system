@@ -53,7 +53,7 @@ $link = $showLink
 $gravatarUrl =
 	empty($email)
 	? ''
-	: sprintf('https://www.gravatar.com/avatar/%s?s=%s', md5(strtolower(trim($email))), $gravatarSize)
+	: sprintf('https://www.gravatar.com/avatar/%s?s=%s', hash('md5', strtolower(trim($email))), $gravatarSize)
 
 ?>
 <?php if ($showGravatar && !$showName && !$showUsername && !$showUserId && !$showEmail): ?>
