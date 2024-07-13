@@ -4,6 +4,7 @@ Akeeba Release System 7.3.3
 ~ Support for Joomla! 5.1's createQuery method in the db object
 ~ Workaround for Joomla! 5.1 CSS in alert DIVs
 ~ PHP 8.4 compatibility: MD5 and SHA-1 functions are deprecated
+~ Use SHA-512 instead of SHA-256 when “Compact Update Streams” is enabled
 # [LOW] Frontend Download IDs list ordering doesn't work
 
 Akeeba Release System 7.3.2

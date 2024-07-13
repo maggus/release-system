@@ -105,8 +105,8 @@ foreach ($this->items as $item)
 
 		if ($minifyXML)
 		{
-			// Joomla supports SHA-256, SHA-384 and SHA-512. For space efficiency reasons SHA-256 is enough.
-			$supportedChecksums = ['sha256'];
+			// Joomla supports SHA-256, SHA-384 and SHA-512. For space efficiency reasons and TUF compatibility SHA-512 is enough.
+			$supportedChecksums = ['sha512'];
 		}
 
 		foreach ($supportedChecksums as $checksum)
