@@ -15,6 +15,8 @@ use Joomla\CMS\Factory;
 use Joomla\CMS\MVC\Factory\MVCFactoryInterface;
 use Joomla\CMS\MVC\Model\ListModel;
 use Joomla\Database\ParameterType;
+use Joomla\Database\Query\QueryElement;
+use Joomla\Database\QueryInterface;
 
 #[\AllowDynamicProperties]
 class LogsModel extends ListModel
@@ -29,16 +31,16 @@ class LogsModel extends ListModel
 		{
 			$config['filter_fields'] = [
 				'search',
-				'id', 'l.id',
-				'item_id', 'i.id',
-				'release_id', 'r.id',
-				'category_id', 'c.id',
-				'user_id', 'u.id',
-				'referer', 'l.referer',
-				'ip', 'l.ip',
-				'accessed_on', 'l.accessed_on',
-				'since', 'after',
+				'id',
+				'user_id',
+				'item_id',
+				'accessed_on',
+				'referer',
+				'ip',
 				'authorized',
+				'search',
+				'dlid',
+				'published'
 			];
 		}
 
@@ -89,7 +91,119 @@ class LogsModel extends ListModel
 		return self::$relItemMap[$itemId];
 	}
 
-	protected function populateState($ordering = 'l.id', $direction = 'desc')
+	public function applyDownloadItemsMeta(array &$items)
+	{
+		if (empty($items))
+		{
+			return;
+		}
+
+		$itemIds = array_unique(
+			array_map(fn(object $item) => $item->item_id, $items)
+		);
+
+		if (empty($itemIds))
+		{
+			return;
+		}
+
+		$db = $this->getDatabase();
+		/** @var QueryInterface $query */
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true));
+		$query
+			->select(
+				[
+					$db->quoteName('i.id', 'item_id'),
+					$db->quoteName('i.title', 'item_title'),
+					$db->quoteName('i.alias', 'item_alias'),
+					$db->quoteName('r.id', 'rel_id'),
+					$db->quoteName('r.version', 'rel_version'),
+					$db->quoteName('r.alias', 'rel_alias'),
+					$db->quoteName('c.id', 'cat_id'),
+					$db->quoteName('c.title', 'cat_title'),
+					$db->quoteName('c.alias', 'cat_alias'),
+				]
+			)
+			->from($db->quoteName('#__ars_items', 'i'))
+			->leftJoin(
+				$db->quoteName('#__ars_releases', 'r'),
+				$db->quoteName('r.id') . ' = ' . $db->quoteName('i.release_id'),
+			)
+			->leftJoin(
+				$db->quoteName('#__ars_categories', 'c'),
+				$db->quoteName('c.id') . ' = ' . $db->quoteName('r.category_id'),
+			);
+		$query->whereIn($db->quoteName('i.id'), $itemIds);
+
+		$itemMeta = $db->setQuery($query)->loadObjectList('item_id');
+
+		if (empty($itemMeta))
+		{
+			return;
+		}
+
+		foreach ($items as $item)
+		{
+			$meta              = $itemMeta[$item->item_id] ?? null;
+			$item->item_title  = $meta?->item_title;
+			$item->item_alias  = $meta?->item_alias;
+			$item->rel_id      = $meta?->rel_id;
+			$item->rel_version = $meta?->rel_version;
+			$item->rel_alias   = $meta?->rel_alias;
+			$item->cat_id      = $meta?->cat_id;
+			$item->cat_title   = $meta?->cat_title;
+			$item->cat_alias   = $meta?->cat_alias;
+		}
+	}
+
+	public function applyUserMeta(array &$items): void
+	{
+		if (empty($items))
+		{
+			return;
+		}
+
+		$userIds = array_unique(
+			array_map(fn(object $user) => $user->user_id, $items)
+		);
+
+		if (empty($userIds))
+		{
+			return;
+		}
+
+		$db = $this->getDatabase();
+		/** @var QueryInterface $query */
+		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true));
+		$query
+			->select(
+				[
+					$db->quoteName('id'),
+					$db->quoteName('name', 'user_fullname'),
+					$db->quoteName('username', 'user_username'),
+					$db->quoteName('email', 'user_email'),
+				]
+			)
+			->from($db->quoteName('#__users'));
+		$query->whereIn($db->quoteName('id'), $userIds);
+
+		$userMeta = $db->setQuery($query)->loadObjectList('id');
+
+		if (empty($userMeta))
+		{
+			return;
+		}
+
+		foreach ($items as $item)
+		{
+			$meta                = $userMeta[$item->user_id] ?? null;
+			$item->user_fullname = $meta?->user_fullname;
+			$item->user_username = $meta?->user_username;
+			$item->user_email    = $meta?->user_email;
+		}
+	}
+
+	protected function populateState($ordering = 'id', $direction = 'desc')
 	{
 		$app = Factory::getApplication();
 
@@ -143,28 +257,18 @@ class LogsModel extends ListModel
 
 	protected function getListQuery()
 	{
+		/**
+		 * l => #__ars_logs
+		 * i => #__ars_items
+		 * r => #__ars_releases
+		 * c => #__ars_categories
+		 * u => #__users
+		 */
+
 		$db    = $this->getDatabase();
 		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
-			->select([
-				$db->quoteName('l') . '.*',
-				$db->quoteName('i.id', 'item_id'),
-				$db->quoteName('i.title', 'item_title'),
-				$db->quoteName('i.alias', 'item_alias'),
-				$db->quoteName('r.id', 'rel_id'),
-				$db->quoteName('r.version', 'rel_version'),
-				$db->quoteName('r.alias', 'rel_alias'),
-				$db->quoteName('c.id', 'cat_id'),
-				$db->quoteName('c.title', 'cat_title'),
-				$db->quoteName('c.alias', 'cat_alias'),
-				$db->quoteName('u.name', 'user_fullname'),
-				$db->quoteName('u.username', 'user_username'),
-				$db->quoteName('u.email', 'user_email'),
-			])
-			->from($db->qn('#__ars_log', 'l'))
-			->join('LEFT', $db->qn('#__ars_items', 'i'), $db->quoteName('i.id') . ' = ' . $db->quoteName('l.item_id'))
-			->join('LEFT', $db->qn('#__ars_releases', 'r'), $db->quoteName('r.id') . ' = ' . $db->quoteName('i.release_id'))
-			->join('LEFT', $db->quoteName('#__ars_categories', 'c'), $db->quoteName('c.id') . ' = ' . $db->quoteName('r.category_id'))
-			->join('LEFT', $db->quoteName('#__users', 'u'), $db->quoteName('u.id') . ' = ' . $db->quoteName('l.user_id'));
+			->select('*')
+			->from($db->qn('#__ars_log'));
 
 		// Search filter
 		$search = $this->getState('filter.search');
@@ -174,45 +278,17 @@ class LogsModel extends ListModel
 			if (stripos($search, 'id:') === 0)
 			{
 				$ids = (int) substr($search, 3);
-				$query->where($db->quoteName('l.id') . ' = :id')
+				$query->where($db->quoteName('id') . ' = :id')
 					->bind(':id', $ids, ParameterType::INTEGER);
 			}
 			else
 			{
-				$ip = '%' . $search . '%';
+				$searchOperator = str_contains($search, '%') ? 'LIKE' : '=';
+				$search         = trim($search);
 
-				$query->where($db->quoteName('l.ip') . ' LIKE :ip')
-					->bind(':ip', $ip);
+				$query->where($db->quoteName('ip') . ' ' . $searchOperator . ' :ip')
+					->bind(':ip', $search);
 			}
-		}
-
-		// User search filter
-		$user = $this->getState('filter.user');
-
-		if (!empty($user))
-		{
-			$user = '%' . $user . '%';
-
-			$query->where(
-				'(' .
-				$db->quoteName('u.name') . ' LIKE :user1 OR ' .
-				$db->quoteName('u.username') . ' LIKE :user2 OR ' .
-				$db->quoteName('u.email') . ' LIKE :user3' .
-				')')
-				->bind(':user1', $user)
-				->bind(':user2', $user)
-				->bind(':user3', $user);
-		}
-
-		// Referer filter
-		$referer = $this->getState('filter.referer');
-
-		if (!empty($referer))
-		{
-			$referer = '%' . $referer . '%';
-
-			$query->where($db->quoteName('l.referer') . ' LIKE :referer')
-				->bind(':referer', $referer);
 		}
 
 		// User ID filter
@@ -225,43 +301,24 @@ class LogsModel extends ListModel
 				->bind(':user_id', $user_id);
 		}
 
-		// Category ID filter
-		$category_id = $this->getState('filter.category_id');
+		// Referer filter
+		$referer = $this->getState('filter.referer');
 
-		if (is_numeric($category_id))
+		if (!empty($referer))
 		{
-			$category_id = (int) $category_id;
-			$query->where($db->quoteName('c.id') . ' = :category_id')
-				->bind(':category_id', $category_id);
+			$referer = '%' . $referer . '%';
+
+			$query->where($db->quoteName('referer') . ' LIKE :referer')
+				->bind(':referer', $referer);
 		}
 
-		// Release ID filter
-		$release_id = $this->getState('filter.release_id');
-
-		if (is_numeric($release_id))
-		{
-			$release_id = (int) $release_id;
-			$query->where($db->quoteName('r.id') . ' = :release_id')
-				->bind(':release_id', $release_id);
-		}
-
-		// Item ID filter
-		$item_id = $this->getState('filter.item_id');
-
-		if (is_numeric($item_id))
-		{
-			$item_id = (int) $item_id;
-			$query->where($db->quoteName('l.item_id') . ' = :item_id')
-				->bind(':item_id', $item_id);
-		}
-
-		// TODO filter.authorized
+		// filter.authorized
 		$authorized = $this->getState('filter.authorized');
 
 		if (is_numeric($authorized))
 		{
 			$authorized = (int) $authorized;
-			$query->where($db->quoteName('l.authorized') . ' = :authorized')
+			$query->where($db->quoteName('authorized') . ' = :authorized')
 				->bind(':authorized', $authorized);
 		}
 

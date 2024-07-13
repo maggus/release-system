@@ -31,7 +31,7 @@ class ArsCategoriesField extends ListField
 
 		foreach ($objectList as $o)
 		{
-			$this->addOption($o->title, [
+			$this->addOption(htmlentities($o->title), [
 				'value' => $o->id,
 			]);
 		}

@@ -10,7 +10,7 @@ namespace Akeeba\Component\ARS\Administrator\View\Logs;
 defined('_JEXEC') or die;
 
 use Akeeba\Component\ARS\Administrator\Mixin\ViewLoadAnyTemplateTrait;
-use Akeeba\Component\ARS\Administrator\Model\ReleasesModel;
+use Akeeba\Component\ARS\Administrator\Model\LogsModel;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Form\Form;
 use Joomla\CMS\Language\Text;
@@ -31,7 +31,7 @@ class HtmlView extends BaseHtmlView
 	 * @var    Form
 	 * @since  1.6
 	 */
-	public $filterForm;
+	public Form $filterForm;
 
 	/**
 	 * The active search filters
@@ -39,7 +39,7 @@ class HtmlView extends BaseHtmlView
 	 * @var    array
 	 * @since  1.6
 	 */
-	public $activeFilters = [];
+	public array $activeFilters = [];
 
 	/**
 	 * An array of items
@@ -47,7 +47,7 @@ class HtmlView extends BaseHtmlView
 	 * @var    array
 	 * @since  1.6
 	 */
-	protected $items = [];
+	protected array $items = [];
 
 	/**
 	 * The pagination object
@@ -55,7 +55,7 @@ class HtmlView extends BaseHtmlView
 	 * @var    Pagination
 	 * @since  1.6
 	 */
-	protected $pagination;
+	protected Pagination $pagination;
 
 	/**
 	 * The model state
@@ -63,17 +63,20 @@ class HtmlView extends BaseHtmlView
 	 * @var    Registry
 	 * @since  1.6
 	 */
-	protected $state;
+	protected Registry $state;
 
 	public function display($tpl = null)
 	{
-		/** @var ReleasesModel $model */
+		/** @var LogsModel $model */
 		$model               = $this->getModel();
-		$this->items         = $model->getItems();
+		$this->items         = $model->getItems() ?: [];
 		$this->pagination    = $model->getPagination();
 		$this->state         = $model->getState();
 		$this->filterForm    = $model->getFilterForm();
 		$this->activeFilters = $model->getActiveFilters();
+
+		$model->applyDownloadItemsMeta($this->items);
+		$model->applyUserMeta($this->items);
 
 		// Check for errors.
 		if (count($errors = $this->get('Errors')))
