@@ -155,6 +155,7 @@ class JsonView extends \Joomla\CMS\MVC\View\JsonView
 								'sha384' => $item->sha384 ?? null,
 								'sha512' => $item->sha512 ?? null,
 							],
+							'length'         => $item->length ?? null,
 						];
 
 						if ($minify)

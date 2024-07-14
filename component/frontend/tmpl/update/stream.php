@@ -153,6 +153,11 @@ foreach ($this->items as $item)
 		{
 			$update->addChild('php_minimum', $minPhp);
 		}
+
+		if (!empty($item->filesize))
+		{
+			$update->addChild('length', $item->filesize );
+		}
 	}
 }
 

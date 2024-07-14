@@ -86,6 +86,7 @@ class UpdateModel extends BaseDatabaseModel
 				$db->quoteName('u') . '.*',
 				$db->quoteName('i.id', 'item_id'),
 				$db->quoteName('i.environments', 'environments'),
+				$db->quoteName('i.filesize'),
 				$db->quoteName('i.md5'),
 				$db->quoteName('i.sha1'),
 				$db->quoteName('i.sha256'),
