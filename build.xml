@@ -6,7 +6,7 @@
   -->
 
 <project name="AkeebaReleaseSystem" description="Akeeba Release System" default="git" >
-	<import file="${phing.dir}/../../buildfiles/phing/common.xml" />
+	<import file="${phing.dir}/../buildfiles/phing/common.xml" />
 
 	<fileset dir="${dirs.component}" id="component">
 		<include name="api/**"/>
@@ -36,18 +36,4 @@
 		<include name="*.txt" />
 		<include name="script.ars.php" />
 	</fileset>
-
-	<!--
-	====================================================================================================
-	Obsolete
-	====================================================================================================
-	-->
-
-	<target name="docsdeploy">
-		<echo message="The docsdeploy target is obsolete. The documentation is now in the wiki" />
-	</target>
-
-	<target name="documentation" description="The documentation">
-		<echo message="The documentation target is obsolete. The documentation is now in the wiki" />
-	</target>
 </project>
