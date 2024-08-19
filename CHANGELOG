@@ -1,6 +1,7 @@
 <?php die(); ?>
 Akeeba Release System 7.3.4
 ================================================================================
+# [HIGH] BleedingEdge: PHP error when we need to delete old BleedingEdge releases
 # [LOW] Wrong language string deleting a release with items
 
 Akeeba Release System 7.3.3

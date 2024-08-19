@@ -21,6 +21,7 @@ use Joomla\CMS\Filesystem\File;
 use Joomla\CMS\Filesystem\Folder;
 use Joomla\CMS\MVC\Model\BaseDatabaseModel;
 use Joomla\CMS\Plugin\PluginHelper;
+use Joomla\CMS\Table\Table;
 
 #[\AllowDynamicProperties]
 class BleedingedgeModel extends BaseDatabaseModel
@@ -137,7 +138,7 @@ class BleedingedgeModel extends BaseDatabaseModel
 		// Keep the releases which are not already marked for deletion. Avoids double entries in $toDelete.
 		if (count($toDelete))
 		{
-			$releases = array_diff($releases, $toDelete);
+			$releases = array_udiff($releases, $toDelete, fn(Table $a, Table $b) => $a->getId() <=> $b->getId());
 		}
 
 		// Apply maximum age limits
@@ -167,7 +168,7 @@ class BleedingedgeModel extends BaseDatabaseModel
 			// Keep the releases which are not already marked for deletion
 			if (count($toDelete))
 			{
-				$releases = array_diff($releases, $toDelete);
+				$releases = array_udiff($releases, $toDelete, fn(Table $a, Table $b) => $a->getId() <=> $b->getId());
 			}
 		}
 

@@ -28,5 +28,12 @@
         <property name="serverTimezone" value="Europe/Athens" />
       </driver-properties>
     </data-source>
+    <data-source source="LOCAL" name="boot5@localhost" uuid="672093dc-2601-43e5-91a5-89328b6ca0f3">
+      <driver-ref>mysql.8</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>com.mysql.cj.jdbc.Driver</jdbc-driver>
+      <jdbc-url>jdbc:mysql://localhost:3306/boot5</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
   </component>
 </project>
