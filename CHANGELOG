@@ -1,4 +1,8 @@
 <?php die(); ?>
+Akeeba Release System 7.3.4
+================================================================================
+# [LOW] Wrong language string deleting a release with items
+
 Akeeba Release System 7.3.3
 ================================================================================
 ~ Support for Joomla! 5.1's createQuery method in the db object
