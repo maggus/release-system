@@ -16,6 +16,9 @@ use Joomla\CMS\Application\ApplicationHelper;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Filter\InputFilter;
 use Joomla\Database\DatabaseDriver;
+use Akeeba\Component\ARS\Administrator\Mixin\EnsureUcmTrait;
+use Joomla\CMS\Tag\TaggableTableInterface;
+use Joomla\CMS\Tag\TaggableTableTrait;
 
 /**
  * ARS Releases table
@@ -40,19 +43,37 @@ use Joomla\Database\DatabaseDriver;
  * @property int    $published         Publish state
  * @property string $language          Language code, '*' for all languages.
  */
-class ReleaseTable extends AbstractTable
+class ReleaseTable extends AbstractTable implements TaggableTableInterface
 {
+	use TaggableTableTrait;
 	use TableCreateModifyTrait;
 	use TableAssertionTrait;
 	use TableColumnAliasTrait;
+	use EnsureUcmTrait;
 
 	/**
 	 * Indicates that columns fully support the NULL value in the database
 	 *
 	 * @var    boolean
-	 * @since  4.0.0
+	 * @since  7.0.0
 	 */
 	protected $_supportNullValue = false;
+
+	/**
+	 * Used internally by Joomla! to manage tags.
+	 *
+	 * @var   null|array
+	 * @since 7.4.0
+	 */
+	public ?array $newTags;
+
+	/**
+	 * The UCM type alias. Used for tags, content versioning etc. Leave blank to effectively disable these features.
+	 *
+	 * @var    string
+	 * @since  7.4.0
+	 */
+	public $typeAlias = 'com_ars.release';
 
 	public function __construct(DatabaseDriver $db)
 	{
@@ -64,6 +85,40 @@ class ReleaseTable extends AbstractTable
 		$this->created_by = Factory::getApplication()->getIdentity()->id;
 		$this->created    = Factory::getDate()->toSql();
 		$this->access     = 1;
+	}
+
+	/**
+	 * Get the type alias for the tags mapping table
+	 *
+	 * The type alias generally is the internal component name with the content type. Ex.: com_content.article
+	 *
+	 * @return  string  The alias as described above
+	 *
+	 * @since   7.4.0
+	 */
+	public function getTypeAlias(): string
+	{
+		return $this->typeAlias;
+	}
+
+	/**
+	 * Runs after loading a record from the database
+	 *
+	 * @param   bool   $result  Did the record load?
+	 * @param   mixed  $keys    The keys used to load the record.
+	 * @param   bool   $reset   Was I asked to reset the object before loading the record?
+	 *
+	 * @return  void
+	 *
+	 * @since   7.4.0
+	 */
+	protected function onAfterLoad(bool &$result, $keys, bool $reset): void
+	{
+		// Make sure existing records have a UCM record
+		if (!$result || !empty($this->id))
+		{
+			$this->ensureUcmRecord();
+		}
 	}
 
 	protected function onBeforeCheck()

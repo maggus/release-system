@@ -14,6 +14,7 @@ use Akeeba\Component\ARS\Administrator\Table\CategoryTable;
 use Exception;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Form\FormFactoryInterface;
+use Joomla\CMS\Helper\TagsHelper;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\MVC\Factory\MVCFactoryInterface;
 use Joomla\CMS\MVC\Model\AdminModel;
@@ -38,6 +39,7 @@ class CategoryModel extends AdminModel
 	 * @var  array
 	 */
 	protected $batch_commands = [
+		'tag'           => 'batchTag',
 		'assetgroup_id' => 'batchAccess',
 		'language_id'   => 'batchLanguage',
 	];
@@ -47,6 +49,22 @@ class CategoryModel extends AdminModel
 		parent::__construct($config, $factory, $formFactory);
 
 		$this->_parent_table = '';
+	}
+
+	/** @inheritDoc */
+	public function getItem($pk = null)
+	{
+		/** @var CategoryTable $item */
+		$item = parent::getItem($pk);
+
+		// Load item tags
+		if (!empty($item->id))
+		{
+			$item->tags = new TagsHelper();
+			$item->tags->getTagIds($item->id, 'com_ars.category');
+		}
+
+		return $item;
 	}
 
 

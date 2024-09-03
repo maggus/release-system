@@ -32,6 +32,7 @@ $user = Factory::getApplication()->getIdentity();
 					<?= $this->form->getField('category_id')->renderField(); ?>
 					<?= $this->form->getField('version')->renderField(); ?>
 					<?= $this->form->getField('alias')->renderField(); ?>
+					<?= $this->form->getField('tags')->renderField(); ?>
 					<?= $this->form->getField('maturity')->renderField(); ?>
 					<?= $this->form->getField('published')->renderField(); ?>
 					<?= $this->form->getField('access')->renderField(); ?>

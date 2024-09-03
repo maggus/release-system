@@ -27,5 +27,10 @@ $published = $this->state->get('filter.published');
 				<?php echo LayoutHelper::render('joomla.html.batch.access', []); ?>
 			</div>
 		</div>
+		<div class="form-group col-md-6">
+			<div class="controls">
+				<?= LayoutHelper::render('joomla.html.batch.tag', []); ?>
+			</div>
+		</div>
 	</div>
 </div>

@@ -33,6 +33,7 @@ $user = Factory::getApplication()->getIdentity();
 				<div class="card-body">
 					<?= $this->form->getField('title')->renderField(); ?>
 					<?= $this->form->getField('alias')->renderField(); ?>
+					<?= $this->form->getField('tags')->renderField(); ?>
 					<?= $this->form->getField('type')->renderField(); ?>
 					<?= $this->form->getField('directory')->renderField(); ?>
 					<?= $this->form->getField('published')->renderField(); ?>

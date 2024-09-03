@@ -1,4 +1,8 @@
 <?php die(); ?>
+Akeeba Release System 7.4.0
+================================================================================
++ Tags in Categories and Releases
+
 Akeeba Release System 7.3.4
 ================================================================================
 # [HIGH] BleedingEdge: PHP error when we need to delete old BleedingEdge releases

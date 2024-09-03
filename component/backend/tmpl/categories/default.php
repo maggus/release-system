@@ -142,6 +142,7 @@ $i = 0;
 									<?php else: ?>
 										<?= $this->escape($item->title); ?>
 									<?php endif ?>
+									<?= $this->loadAnyTemplate('common/tags', false, ['item' => $item, 'type' => 'com_ars.category']) ?>
 								</td>
 
 								<td>

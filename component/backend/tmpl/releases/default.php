@@ -165,6 +165,7 @@ $cParams = ComponentHelper::getParams('com_ars');
 											<?php endif; ?>
 										</small>
 									<?php endif; ?>
+									<?= $this->loadAnyTemplate('common/tags', false, ['item' => $item, 'type' => 'com_ars.category']) ?>
 								</td>
 
 								<td class="d-none d-md-table-cell">

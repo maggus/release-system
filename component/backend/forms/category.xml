@@ -32,6 +32,13 @@
                 required="true"
         />
 
+        <field name="tags"
+               type="tag"
+               label="JTAG"
+               class="advancedSelect"
+               multiple="true"
+        />
+
         <field
                 name="description"
                 type="editor"
