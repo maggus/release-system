@@ -46,6 +46,7 @@ class ReleasesModel extends ListModel
 				'r.language',
 				'ordering',
 				'r.ordering',
+				'tag'
 			];
 		}
 
@@ -349,6 +350,47 @@ class ReleasesModel extends ListModel
 			case 'stable':
 				$query->where($db->quoteName('maturity') . ' = ' . $db->quote('stable'));
 				break;
+		}
+
+		// FILTER: Tags
+		$tag = $this->getState('filter.tag');
+
+		if (!empty($tag))
+		{
+			// Run simplified query when filtering by one tag.
+			if (\is_array($tag) && \count($tag) === 1)
+			{
+				$tag = $tag[0];
+			}
+
+			if (\is_array($tag))
+			{
+				$tag = ArrayHelper::toInteger($tag);
+
+				$subQuery = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
+					->select('DISTINCT ' . $db->quoteName('content_item_id'))
+					->from($db->quoteName('#__contentitem_tag_map'))
+					->where($db->quoteName('tag_id') . 'IN(' .  implode(',', $tag) . ')')
+					->where($db->quoteName('type_alias') . ' = ' . $db->quote('com_ars.release'));
+
+				$query->join(
+					'INNER',
+					'(' . $subQuery . ') AS ' . $db->quoteName('tagmap'),
+					$db->quoteName('tagmap.content_item_id') . ' = ' . $db->quoteName('r.id')
+				);
+			}
+			else
+			{
+				$tag = (int) $tag;
+				$query->join(
+					'INNER',
+					$db->quoteName('#__contentitem_tag_map', 'tagmap'),
+					$db->quoteName('tagmap.content_item_id') . ' = ' . $db->quoteName('r.id')
+				)
+					->where($db->quoteName('tagmap.type_alias') . ' = ' . $db->quote('com_ars.release'))
+					->where($db->quoteName('tag_id') . '= :tag')
+					->bind(':tag', $tag, ParameterType::INTEGER);
+			}
 		}
 
 		// List ordering clause
