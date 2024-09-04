@@ -57,7 +57,11 @@ class HtmlView extends BaseHtmlView
 		$params = $app->getParams();
 
 		$this->items = array_map(
-			fn(object $item): object => $this->preprocessCustomFields($item, 'com_ars.category'),
+			function (object $item): object {
+				$item->fieldscatid = $item->id;
+
+				return $this->preprocessCustomFields($item, 'com_ars.category');
+			},
 			$model->getItems() ?? []
 		);
 

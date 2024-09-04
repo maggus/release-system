@@ -261,6 +261,9 @@ class ReleaseModel extends AdminModel
 			// Get the primary key of the record being edited.
 			$pk = (int) $this->getState($this->getName() . '.id');
 
+			// This tells Joomla Fields which category ID to filter by since we're not using Joomla's com_categories.
+			$data->fieldscatid = $data->category_id;
+
 			// No primary key = new record. Override default values based on the filters set in the Releases page.
 			if ($pk <= 0)
 			{

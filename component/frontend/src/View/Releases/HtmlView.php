@@ -72,11 +72,16 @@ class HtmlView extends BaseHtmlView
 		$app = Factory::getApplication();
 
 		$this->items = array_map(
-			fn(object $item): object => $this->preprocessCustomFields($item, 'com_ars.release'),
+			function (object $item): object {
+				$item->fieldscatid = $item->category_id;
+
+				return $this->preprocessCustomFields($item, 'com_ars.release');
+			},
 			$model->getItems() ?? []
 		);
 
-		$this->category = $this->preprocessCustomFields($this->category, 'com_ars.category');
+		$this->category->fieldscatid = $this->category->id;
+		$this->category              = $this->preprocessCustomFields($this->category, 'com_ars.category');
 
 		// Breadcrumbs
 		$repoType = $this->category->type;

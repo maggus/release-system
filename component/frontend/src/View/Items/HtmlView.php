@@ -122,8 +122,9 @@ class HtmlView extends BaseHtmlView
 		$cParams = ComponentHelper::getParams('com_ars');
 		$user    = $app->getIdentity();
 
-		$this->items   = $model->getItems();
-		$this->release = $this->preprocessCustomFields($this->release, 'com_ars.release');
+		$this->items                = $model->getItems();
+		$this->release->fieldscatid = $this->release->category_id;
+		$this->release              = $this->preprocessCustomFields($this->release, 'com_ars.release');
 
 		// Breadcrumbs
 		$repoType = $this->category->type;

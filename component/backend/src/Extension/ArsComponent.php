@@ -17,14 +17,20 @@ use Joomla\CMS\Categories\CategoryServiceInterface;
 use Joomla\CMS\Categories\CategoryServiceTrait;
 use Joomla\CMS\Component\Router\RouterServiceInterface;
 use Joomla\CMS\Component\Router\RouterServiceTrait;
+use Joomla\CMS\Event\Model\PrepareFormEvent;
 use Joomla\CMS\Extension\BootableExtensionInterface;
 use Joomla\CMS\Extension\MVCComponent;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Fields\FieldsServiceInterface;
+use Joomla\CMS\Form\Form;
 use Joomla\CMS\HTML\HTMLRegistryAwareTrait;
 use Joomla\CMS\Language\Text;
 use Joomla\CMS\Tag\TagServiceInterface;
 use Joomla\CMS\Tag\TagServiceTrait;
+use Joomla\Component\Categories\Administrator\Field\CategoryeditField;
+use Joomla\Event\Dispatcher;
+use Joomla\Event\DispatcherInterface;
+use Joomla\Event\Event;
 use Psr\Container\ContainerInterface;
 
 class ArsComponent extends MVCComponent implements
@@ -40,9 +46,73 @@ class ArsComponent extends MVCComponent implements
 	}
 	use TagServiceTrait;
 
+	private static $hasRegisteredHandler = false;
+
 	public function boot(ContainerInterface $container)
 	{
 		$this->getRegistry()->register('ars', new AkeebaReleaseSystem());
+	}
+
+	/**
+	 * Magically use ARS categories (instead of com_categories) in the Fields user interface.
+	 *
+	 * DO NOT DO THIS IN YOUR OWN SOFTWARE. I am having Joomla do things it's not supposed to even support.
+	 *
+	 * “The Dark Side of the Force is a pathway to many abilities some consider to be unnatural.”
+	 *    — Darth Sidious
+	 *
+	 * @return  void
+	 * @since   7.4.0
+	 */
+	private function magicFieldsUsingARSCategories($section): void
+	{
+		// This trick allows us to only register our event handler once.
+		if (self::$hasRegisteredHandler)
+		{
+			return;
+		}
+
+		self::$hasRegisteredHandler = true;
+
+		// Register an event handler, as if there was a plugin.
+		/** @var Dispatcher $dispatcher */
+		$dispatcher = Factory::getContainer()->get(DispatcherInterface::class);
+		$dispatcher->addListener(
+			'onContentPrepareForm',
+			function (Event $event) use ($section)
+			{
+				// Make sure this really is the form preparation event.
+				if (!$event instanceof PrepareFormEvent)
+				{
+					return;
+				}
+
+				// Make sure we have a form for ARS fields
+				$form = $event->getArgument('subject');
+
+				if (!$form instanceof Form || !str_starts_with($form->getName(), 'com_fields.field.com_ars.'))
+				{
+					return;
+				}
+
+				// Get all known ARS categories
+				$childrenCategories = (new ARSPseudoCategory([], $section))->get()->getChildren();
+
+				// Add the ARS categories to the assigned_cat_ids field in Joomla's Fields component.
+				/** @var CategoryeditField $catField */
+				$catField = $form->getField('assigned_cat_ids');
+
+				foreach($childrenCategories as $category)
+				{
+					$catField->addOption(
+						htmlentities($category->title),
+						[
+							'value' => $category->id,
+						]
+					);
+				}
+			}
+		);
 	}
 
 	/**
@@ -59,7 +129,10 @@ class ArsComponent extends MVCComponent implements
 	 */
 	public function getCategory(array $options = [], $section = ''): CategoryInterface
 	{
-		return new ARSPseudoCategory($options);
+		// Force Joomla's Fields component to show ARS' categories, even though we're not using com_categories.
+		$this->magicFieldsUsingARSCategories($section);
+
+		return new ARSPseudoCategory($options, $section);
 	}
 
 	/**

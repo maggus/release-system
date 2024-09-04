@@ -12,9 +12,23 @@ use Joomla\CMS\Categories\CategoryNode;
 
 class ARSPseudoCategory implements CategoryInterface
 {
+	public function __construct(protected array $options, protected string $section)
+	{
+	}
+
 	#[\ReturnTypeWillChange]
 	public function get($id = 'root', $forceload = false): ?CategoryNode
 	{
-		return new CategoryNode([], $this);
+		if ($id == 'root')
+		{
+			return new RootNode([], $this);
+		}
+
+		return new LeafNode($id, $this);
+	}
+
+	public function getExtension(): string
+	{
+		return 'com_ars';
 	}
 }
