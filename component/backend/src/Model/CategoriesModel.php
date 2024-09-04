@@ -78,6 +78,7 @@ class CategoriesModel extends ListModel
 		$id    .= ':' . serialize($this->getState('filter.language'));
 		$id    .= ':' . $this->getState('filter.allowUnauth');
 		$id    .= ':' . serialize($this->getState('filter.access'));
+		$id    .= ':' . serialize($this->getState('filter.tag'));
 
 		return parent::getStoreId($id);
 	}

@@ -61,6 +61,29 @@
             </field>
 
             <field
+                    name="tag"
+                    type="tag"
+                    label="JTAG"
+                    multiple="true"
+                    mode="nested"
+                    custom="false"
+                    hint="JOPTION_SELECT_TAG"
+                    default=""
+            />
+
+            <field
+                    name="rel_tag"
+                    type="tag"
+                    label="JTAG"
+                    multiple="true"
+                    mode="nested"
+                    custom="false"
+                    hint="COM_ARS_RELEASES_TAG_LBL"
+                    description="COM_ARS_RELEASES_TAG_DESC"
+                    default=""
+            />
+
+            <field
                     name="orderby"
                     type="list"
                     default="order"

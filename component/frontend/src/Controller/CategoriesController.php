@@ -67,6 +67,14 @@ class CategoriesController extends BaseController
 			$model->setState('filter.language', ['*', $this->app->getLanguage()->getTag()]);
 		}
 
+		// Tags filter
+		$model->setState('filter.tag', null);
+
+		if ($tagsFilter = $params->get('tag', null))
+		{
+			$model->setState('filter.tag', $tagsFilter);
+		}
+
 		// Apply the Order By from the page parameters (default: ordering)
 		$this->applyCategoryOrderBy($params->get('orderby', 'order'), $model);
 

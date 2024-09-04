@@ -72,6 +72,14 @@ class ReleasesController extends BaseController
 			$model->setState('filter.language', ['*', $this->app->getLanguage()->getTag()]);
 		}
 
+		// Tags filter
+		$model->setState('filter.tag', null);
+
+		if ($tagsFilter = $params->get('rel_tag', null))
+		{
+			$model->setState('filter.tag', $tagsFilter);
+		}
+
 		// Apply the Order By from the page parameters (default: ordering)
 		$this->applyReleaseOrderBy($params->get('rel_orderby', 'order'), $model);
 
