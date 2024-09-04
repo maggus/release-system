@@ -11,6 +11,7 @@ defined('_JEXEC') || die;
 
 use Akeeba\Component\ARS\Administrator\Mixin\ViewLoadAnyTemplateTrait;
 use Akeeba\Component\ARS\Administrator\Mixin\ViewTaskBasedEventsTrait;
+use Akeeba\Component\ARS\Site\Mixin\ViewCustomFieldsTrait;
 use Akeeba\Component\ARS\Site\Model\CategoriesModel;
 use Joomla\CMS\Application\SiteApplication;
 use Joomla\CMS\Factory;
@@ -22,6 +23,7 @@ class HtmlView extends BaseHtmlView
 {
 	use ViewTaskBasedEventsTrait;
 	use ViewLoadAnyTemplateTrait;
+	use ViewCustomFieldsTrait;
 
 	/** @var  array  The items to display */
 	public $items;
@@ -54,7 +56,10 @@ class HtmlView extends BaseHtmlView
 		$app    = Factory::getApplication();
 		$params = $app->getParams();
 
-		$this->items = $model->getItems();
+		$this->items = array_map(
+			fn(object $item): object => $this->preprocessCustomFields($item, 'com_ars.category'),
+			$model->getItems() ?? []
+		);
 
 		// Do I have a custom HTML file?
 		$useCustomHtml      = $params->get('useCustomRepoFile', 1) == 1;

@@ -14,6 +14,7 @@ use Akeeba\Component\ARS\Administrator\Mixin\ViewTaskBasedEventsTrait;
 use Akeeba\Component\ARS\Administrator\Table\CategoryTable;
 use Akeeba\Component\ARS\Administrator\Table\ReleaseTable;
 use Akeeba\Component\ARS\Site\Helper\Breadcrumbs;
+use Akeeba\Component\ARS\Site\Mixin\ViewCustomFieldsTrait;
 use Akeeba\Component\ARS\Site\Model\ItemsModel;
 use Akeeba\Component\ARS\Site\Model\ReleasesModel;
 use Joomla\CMS\Application\SiteApplication;
@@ -27,6 +28,7 @@ class HtmlView extends BaseHtmlView
 {
 	use ViewTaskBasedEventsTrait;
 	use ViewLoadAnyTemplateTrait;
+	use ViewCustomFieldsTrait;
 
 	/** @var  array  The items to display */
 	public $items;
@@ -69,7 +71,12 @@ class HtmlView extends BaseHtmlView
 		/** @var SiteApplication $app */
 		$app = Factory::getApplication();
 
-		$this->items = $model->getItems();
+		$this->items = array_map(
+			fn(object $item): object => $this->preprocessCustomFields($item, 'com_ars.release'),
+			$model->getItems() ?? []
+		);
+
+		$this->category = $this->preprocessCustomFields($this->category, 'com_ars.category');
 
 		// Breadcrumbs
 		$repoType = $this->category->type;

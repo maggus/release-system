@@ -56,6 +56,7 @@ HTMLHelper::_('bootstrap.collapse', '.ars-collapse');
 			<?= Text::_('COM_ARS_RELEASES_MATURITY_' . $item->maturity) ?>
 		</span>
 	</h4>
+	<?= $this->renderCustomFields($item, 'com_ars.release', 1) ?>
 	<?php if (!empty($environments)): ?>
 		<p>
 			<?php foreach ($environments as $environment): ?>
@@ -115,7 +116,9 @@ HTMLHelper::_('bootstrap.collapse', '.ars-collapse');
 				<h3>
 					<?= Text::_('COM_ARS_RELEASE_NOTES_LABEL') ?>
 				</h3>
+				<?= $this->renderCustomFields($item, 'com_ars.release', 2) ?>
 				<?= HTMLHelper::_('ars.preProcessMessage', $item->notes, 'com_ars.release_notes') ?>
+				<?= $this->renderCustomFields($item, 'com_ars.release', 3) ?>
 			</div>
 
 			<?php if (!($no_link ?? false)): ?>

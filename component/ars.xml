@@ -20,6 +20,7 @@
     <files folder="frontend">
         <folder>forms</folder>
         <folder>language</folder>
+        <folder>layouts</folder>
         <folder>src</folder>
         <folder>tmpl</folder>
     </files>
@@ -82,6 +83,14 @@
                     <menu-quicktask-permission>core.create;com_ars</menu-quicktask-permission>
                 </params>
                 COM_ARS_TITLE_ITEMS
+            </menu>
+
+            <menu link="option=com_fields&amp;view=fields&amp;context=com_ars.release">
+                JGLOBAL_FIELDS
+            </menu>
+
+            <menu link="option=com_fields&amp;view=groups&amp;context=com_ars.release   ">
+                JGLOBAL_FIELD_GROUPS
             </menu>
 
             <menu

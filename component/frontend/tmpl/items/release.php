@@ -54,6 +54,8 @@ switch ($item->maturity)
         </span>
 	</h3>
 
+	<?= $this->renderCustomFields($item, 'com_ars.release', 1) ?>
+
 	<div class="text-muted d-flex mb-2">
 		<div class="flex-grow-1">
 			<strong><?= Text::_('COM_ARS_RELEASE_LBL_RELEASEDON') ?></strong>:
@@ -71,7 +73,9 @@ switch ($item->maturity)
 
 	<div id="ars-release-<?= $item->id ?>-info" class="collapse mb-2">
 		<div class="card card-body">
+			<?= $this->renderCustomFields($item, 'com_ars.release', 2) ?>
 			<?= HTMLHelper::_('ars.preProcessMessage', $item->notes, 'com_ars.release_notes') ?>
+			<?= $this->renderCustomFields($item, 'com_ars.release', 3) ?>
 		</div>
 	</div>
 </div>

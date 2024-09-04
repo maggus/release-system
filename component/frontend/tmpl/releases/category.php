@@ -20,5 +20,6 @@ use Akeeba\Component\ARS\Site\View\Releases\HtmlView;
 	<h3 class="text-muted mb-4">
 		<?= $this->escape($item->title) ?>
 	</h3>
+	<?= $this->renderCustomFields($item, 'com_ars.category', 1) ?>
 </div>
 

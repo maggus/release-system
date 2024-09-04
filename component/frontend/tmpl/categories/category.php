@@ -14,7 +14,7 @@ use Joomla\CMS\Language\Text;
 use Joomla\CMS\Router\Route;
 
 /**
- * @var  HtmlView $this
+ * @var HtmlView  $this
  * @var object    $item
  * @var int       $id
  * @var ?int      $Itemid
@@ -54,11 +54,13 @@ HTMLHelper::_('bootstrap.collapse', '.ars-collapse');
 			<?= Text::_('COM_ARS_CATEGORIES_LBL_AVAILABLEVERSIONS') ?>
 		</a>
 	</p>
-
+	<?= $this->renderCustomFields($item, 'com_ars.category', 1) ?>
 	<div class="collapse" id="ars-category-<?= $this->escape($id) ?>-info">
 		<div class="ars-browse-category card card-body">
 			<div class="ars-category-description">
+				<?= $this->renderCustomFields($item, 'com_ars.category', 2) ?>
 				<?= HTMLHelper::_('ars.preProcessMessage', $item->description, 'com_ars.category_description') ?>
+				<?= $this->renderCustomFields($item, 'com_ars.category', 3) ?>
 			</div>
 		</div>
 	</div>
