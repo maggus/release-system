@@ -5,6 +5,7 @@ Akeeba Release System 7.4.0
 + Fields in Categories and Releases
 + Option to control logging [gh-234]
 + Option to control item hit counting [gh-234]
++ Option to make public downloads cacheable
 
 Akeeba Release System 7.3.4
 ================================================================================

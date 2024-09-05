@@ -13,13 +13,14 @@ use Akeeba\Component\ARS\Administrator\Mixin\RunPluginsTrait;
 use Akeeba\Component\ARS\Administrator\Mixin\TableAssertionTrait;
 use Akeeba\Component\ARS\Administrator\Table\CategoryTable;
 use Akeeba\Component\ARS\Administrator\Table\ItemTable;
-use Akeeba\Component\ARS\Administrator\Table\ReleaseTable;
+use AllowDynamicProperties;
 use Exception;
 use finfo;
 use Joomla\Application\Web\WebClient;
 use Joomla\CMS\Application\SiteApplication;
 use Joomla\CMS\Authentication\Authentication;
 use Joomla\CMS\Authentication\AuthenticationResponse;
+use Joomla\CMS\Component\ComponentHelper;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Filesystem\File;
 use Joomla\CMS\Filesystem\Folder;
@@ -30,7 +31,7 @@ use Joomla\CMS\User\UserFactoryInterface;
 use Joomla\Database\ParameterType;
 use RuntimeException;
 
-#[\AllowDynamicProperties]
+#[AllowDynamicProperties]
 class ItemModel extends BaseDatabaseModel
 {
 	use TableAssertionTrait;
@@ -88,9 +89,22 @@ class ItemModel extends BaseDatabaseModel
 		}
 	}
 
+	private function downloadLinkItem(ItemTable $item, CategoryTable $category): void
+	{
+		$app = Factory::getApplication();
+
+		if (@ob_get_length() !== false)
+		{
+			@ob_end_clean();
+		}
+
+		$this->logoutUser();
+
+		$app->redirect($item->url);
+	}
 
 	/**
-	 * Perform a file download
+	 * Handle the requested download
 	 *
 	 * @param   ItemTable      $item      The item record to download
 	 * @param   CategoryTable  $category  The category the item belongs to
@@ -99,22 +113,20 @@ class ItemModel extends BaseDatabaseModel
 	 */
 	public function doDownload(ItemTable $item, CategoryTable $category): void
 	{
-		$app = Factory::getApplication();
-
-		// If it's a link we just have to redirect users
-		if ($item->type == 'link')
+		switch ($item->type)
 		{
-			if (@ob_get_length() !== false)
-			{
-				@ob_end_clean();
-			}
+			case 'link':
+				$this->downloadLinkItem($item, $category);
 
-			$this->logoutUser();
-
-			$app->redirect($item->url);
-
-			return;
+			default:
+				$this->downloadFileItem($item, $category);
 		}
+	}
+
+	private function downloadFileItem(ItemTable $item, CategoryTable $category): void
+	{
+		$app     = Factory::getApplication();
+		$cParams = ComponentHelper::getParams('com_ars');
 
 		try
 		{
@@ -169,9 +181,9 @@ class ItemModel extends BaseDatabaseModel
 		{
 			$header_file = preg_replace('/\./', '%2e', $basename, substr_count($basename, '.') - 1);
 
-			if (function_exists('ini_get') &&
-				function_exists('ini_set') &&
-				ini_get('zlib.output_compression'))
+			if (function_exists('ini_get')
+			    && function_exists('ini_set')
+			    && ini_get('zlib.output_compression'))
 			{
 				ini_set('zlib.output_compression', 'Off');
 			}
@@ -209,15 +221,25 @@ class ItemModel extends BaseDatabaseModel
 
 		@clearstatcache();
 
-		// Disable caching
-		header("Cache-Control: no-store, max-age=0, must-revalidate, no-transform", true);
+		$headers = [
+			'Cache-Control'             => 'no-store, max-age=0, must-revalidate, no-transform',
+			'Content-Type'              => $mime_type,
+			'Accept-Ranges'             => 'bytes',
+			'Content-Disposition'       => "attachment; filename=\"$header_file\"",
+			'Content-Transfer-Encoding' => 'binary',
+		];
 
-		// Send MIME headers
-		header('Content-Type: ' . $mime_type);
-		header("Accept-Ranges: bytes");
-		header('Content-Disposition: attachment; filename="' . $header_file . '"');
-		header('Content-Transfer-Encoding: binary');
-		header('Connection: close');
+		// Only guest downloads can be allowed to be cached
+		if ($cParams->get('allowcaching', 0) && $app->getIdentity()->guest)
+		{
+			$cacheTime = max(30, intval($cParams->get('caching_length', 864000)));
+			$headers['Cache-Control'] = 'public, max-age=' . $cacheTime;
+		}
+
+		foreach ($headers as $header => $value)
+		{
+			header($header . ': ' . $value, true);
+		}
 
 		error_reporting(0);
 		set_time_limit(0);
@@ -448,7 +470,7 @@ class ItemModel extends BaseDatabaseModel
 			->from($db->quoteName('#__ars_dlidlabels'))
 			->where($db->quoteName('dlid') . ' = :dlid')
 			->where($db->quoteName('primary') . ' = :isPrimary')
-            ->where($db->quoteName('published') . ' = 1')
+			->where($db->quoteName('published') . ' = 1')
 			->bind(':isPrimary', $isPrimary, ParameterType::INTEGER)
 			->bind(':dlid', $downloadId, ParameterType::STRING);
 
