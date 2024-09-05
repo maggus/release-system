@@ -20,15 +20,20 @@ use Joomla\Application\Web\WebClient;
 use Joomla\CMS\Application\SiteApplication;
 use Joomla\CMS\Authentication\Authentication;
 use Joomla\CMS\Authentication\AuthenticationResponse;
+use Joomla\CMS\Cache\CacheControllerFactoryInterface;
+use Joomla\CMS\Cache\Controller\CallbackController;
 use Joomla\CMS\Component\ComponentHelper;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Filesystem\File;
 use Joomla\CMS\Filesystem\Folder;
+use Joomla\CMS\Http\HttpFactory;
 use Joomla\CMS\MVC\Model\BaseDatabaseModel;
 use Joomla\CMS\Plugin\PluginHelper;
+use Joomla\CMS\Uri\Uri;
 use Joomla\CMS\User\User;
 use Joomla\CMS\User\UserFactoryInterface;
 use Joomla\Database\ParameterType;
+use phpDocumentor\Reflection\PseudoTypes\IntegerValue;
 use RuntimeException;
 
 #[AllowDynamicProperties]
@@ -99,6 +104,12 @@ class ItemModel extends BaseDatabaseModel
 	 */
 	public function doDownload(ItemTable $item, CategoryTable $category): void
 	{
+		// Clear cache
+		while (@ob_get_length() !== false)
+		{
+			@ob_end_clean();
+		}
+
 		switch ($item->type)
 		{
 			case 'link':
@@ -323,20 +334,285 @@ class ItemModel extends BaseDatabaseModel
 		return $haveLoggedOut;
 	}
 
+	/**
+	 * Handle download of an Item with type Link (we're given a URL).
+	 *
+	 * @param   ItemTable      $item
+	 * @param   CategoryTable  $category
+	 *
+	 * @return  void
+	 * @throws  Exception
+	 * @since   7.4.0
+	 */
 	private function downloadLinkItem(ItemTable $item, CategoryTable $category): void
 	{
-		$app = Factory::getApplication();
+		$app      = Factory::getApplication();
+		$cParams  = ComponentHelper::getParams('com_ars');
+		$dlMethod = $cParams->get('url_dl', 'temp');
 
-		if (@ob_get_length() !== false)
+		// If we have to do a temporary or permanent redirect just do so without further ado.
+		if (in_array($dlMethod, ['temp', 'permanent']))
 		{
-			@ob_end_clean();
+			$this->logoutUser();
+
+			$httpCode = $dlMethod === 'temp' ? 303 : 301;
+
+			$app->redirect($item->url, $httpCode);
+
+			return;
+		}
+
+		// Get the basic information of the file we need to download
+		$uri          = new Uri($item->url);
+		$header_file  = basename($uri->getPath());
+		$cacheId      = 'dl_' . sha1($header_file . '#:#' . $app->get('secret'));
+
+		// Get the applicable cache time for the download item.
+		$cacheTime = (function() use ($cParams){
+			// If caching of guest downloads is disabled use the hardcoded default of one hour.
+			if (!$cParams->get('allowcaching', 0))
+			{
+				return 60;
+			}
+
+			// Otherwise, round the “Maximum cache age (seconds)” up to the next whole minute.
+			$seconds = max($cParams->get('caching_length', 30), 30);
+
+			return (int) ceil($seconds / 30);
+		})();
+
+		// Get a callback cache controller
+		/** @var CacheControllerFactoryInterface $cacheControllerFactory */
+		$cacheControllerFactory = Factory::getContainer()->get('cache.controller.factory');
+		/** @var CallbackController $cacheController */
+		$cacheController = $cacheControllerFactory->createCacheController(
+			'callback',
+			[
+				'lifetime'     => $cacheTime,
+				'defaultgroup' => 'com_ars',
+				'caching'      => true,
+			]
+		);
+
+		// Get a PSR-7 object for the remote item from the cache.
+		/** @var \Joomla\Http\Response $httpResponse */
+		$httpResponse = $cacheController->get(
+			fn(string $url) => HttpFactory::getHttp(['follow_location' => 1], ['curl', 'stream'])
+				->get($url),
+			$item->url,
+			$cacheId
+		);
+
+		// If the download had failed, we throw an exception right away
+		if ($httpResponse->getStatusCode() !== 200)
+		{
+			$cacheController->remove($cacheId, 'com_ars');
+
+			throw new RuntimeException('The download item is temporarily unavailable.');
+		}
+
+		// Fix IE bugs
+		if ($app->client->engine == WebClient::TRIDENT)
+		{
+			$header_file = preg_replace('/\./', '%2e', $header_file, substr_count($header_file, '.') - 1);
+
+			if (function_exists('ini_get')
+			    && function_exists('ini_set')
+			    && ini_get('zlib.output_compression'))
+			{
+				ini_set('zlib.output_compression', 'Off');
+			}
+		}
+
+		// Import ARS plugins
+		PluginHelper::importPlugin('ars');
+
+		// Call any plugins to post-process the download file parameters
+		$mime_type = $this->getMimeTypeFromContentTypeHeader(
+			array_reduce(
+				$httpResponse->getHeader('Content-Type') ?? [],
+				fn(?string $carry, ?string $header) => $carry ?? $header ?? null
+			)
+		) ?: 'application/octet-stream';
+		$object    = [
+			'rawentry'    => $item,
+			'filename'    => $item->url,
+			'basename'    => basename($uri->getPath()),
+			'header_file' => $header_file,
+			'mimetype'    => $mime_type,
+			'filesize'    => array_reduce(
+				$httpResponse->getHeader('Content-Length') ?? [],
+				fn(?int $carry, ?string $header) => $carry ?? (
+				empty($header) ? null : intval($header)
+				)
+			) ?: $item->filesize,
+		];
+
+		$retArray = $this->triggerPluginEvent('onARSBeforeSendFile', [$object], null, $app) ?: [];
+
+		foreach ($retArray as $ret)
+		{
+			if (empty($ret) || !is_array($ret))
+			{
+				continue;
+			}
+
+			$ret         = (object) $ret;
+			$filename    = $ret->filename;
+			$basename    = $ret->basename;
+			$header_file = $ret->header_file;
+			$mime_type   = $ret->mimetype;
+			$filesize    = $ret->filesize;
+		}
+
+		$headers = [
+			'Cache-Control'             => 'no-store, max-age=0, must-revalidate, no-transform',
+			'Content-Type'              => $mime_type,
+			'Accept-Ranges'             => 'bytes',
+			'Content-Disposition'       => "attachment; filename=\"$header_file\"",
+			'Content-Transfer-Encoding' => 'binary',
+		];
+
+		// Should I add a Content-Digest header?
+		if ($cParams->get('content_digest', 1) && $digest = $this->getContentDigestHeaderValue($item))
+		{
+			$headers['Content-Digest'] = $digest;
+		}
+
+		// Only guest downloads can be allowed to be cached
+		if ($cParams->get('allowcaching', 0) && $app->getIdentity()->guest)
+		{
+			$cacheTime                = max(30, intval($cParams->get('caching_length', 864000)));
+			$headers['Cache-Control'] = 'public, max-age=' . $cacheTime;
+		}
+
+		foreach ($headers as $header => $value)
+		{
+			header($header . ': ' . $value, true);
+		}
+
+		error_reporting(0);
+		set_time_limit(0);
+
+		// Support resumable downloads
+		$isResumable = false;
+		$seek_start  = 0;
+		$seek_end    = $filesize - 1;
+
+		$range = $app->input->server->get('HTTP_RANGE', null, 'raw');
+
+		if (!is_null($range) || (trim($range) === ''))
+		{
+			[$size_unit, $range_orig] = explode('=', $range, 2);
+
+			if ($size_unit == 'bytes')
+			{
+				//multiple ranges could be specified at the same time, but for simplicity only serve the first range
+				//http://tools.ietf.org/id/draft-ietf-http-range-retrieval-00.txt
+				/** @noinspection PhpUnusedLocalVariableInspection */
+				[$range, $extra_ranges] = explode(',', $range_orig, 2);
+			}
+			else
+			{
+				$range = '';
+			}
+		}
+		else
+		{
+			$range = '';
+		}
+
+		if ($range)
+		{
+			// Figure out download piece from range (if set)
+			[$seek_start, $seek_end] = explode('-', $range, 2);
+
+			// Set start and end based on range (if set), else set defaults. Also checks for invalid ranges.
+			$seek_end   = (empty($seek_end)) ? ($filesize - 1) : min(abs(intval($seek_end)), ($filesize - 1));
+			$seek_start =
+				(empty($seek_start) || $seek_end < abs(intval($seek_start))) ? 0 : max(abs(intval($seek_start)), 0);
+
+			$isResumable = true;
+		}
+
+		if ($isResumable)
+		{
+			// Only send partial content header if downloading a piece of the file (IE workaround)
+			if ($seek_start > 0 || $seek_end < ($filesize - 1))
+			{
+				header('HTTP/1.1 206 Partial Content');
+			}
+
+			// Necessary headers
+			$totalLength = $seek_end - $seek_start + 1;
+
+			header('Content-Range: bytes ' . $seek_start . '-' . $seek_end . '/' . $filesize);
+			header('Content-Length: ' . $totalLength);
+		}
+		else
+		{
+			// Notify of filesize, if this info is available
+			if ($filesize > 0)
+			{
+				header('Content-Length: ' . (int) $filesize);
+			}
+		}
+
+		$bodyStream = $httpResponse->getBody();
+		$bodyStream->rewind();
+
+		if ($isResumable)
+		{
+			$bodyStream->seek($seek_start);
+
+			echo $bodyStream->read($seek_end - $seek_start + 1);
+		}
+		else
+		{
+			echo $httpResponse->body;
+		}
+
+		@ob_flush();
+		flush();
+
+		// Call any plugins to post-process the file download
+		$object = [
+			'rawentry'    => $item,
+			'filename'    => $filename,
+			'basename'    => $basename,
+			'header_file' => $header_file,
+			'mimetype'    => $mime_type,
+			'filesize'    => $filesize,
+			'resumable'   => $isResumable,
+			'range_start' => $seek_start,
+			'range_end'   => $seek_end,
+		];
+
+		$ret = $this->triggerPluginEvent('onARSAfterSendFile', [$object], null, $app) ?: [];
+
+		foreach ($ret as $r)
+		{
+			if (!empty($r))
+			{
+				echo $r;
+			}
 		}
 
 		$this->logoutUser();
 
-		$app->redirect($item->url);
+		$app->close();
 	}
 
+	/**
+	 * Handle download of an Item with type File (we're given a local file path).
+	 *
+	 * @param   ItemTable      $item
+	 * @param   CategoryTable  $category
+	 *
+	 * @return  void
+	 * @throws  Exception
+	 * @since   7.4.0
+	 */
 	private function downloadFileItem(ItemTable $item, CategoryTable $category): void
 	{
 		$app     = Factory::getApplication();
@@ -382,13 +658,6 @@ class ItemModel extends BaseDatabaseModel
 
 		$mime_type   = $mime_type ?: $this->get_mime_type($filename) ?: 'application/octet-stream';
 		$header_file = $basename;
-
-		// Clear cache
-		/** @noinspection PhpStatementHasEmptyBodyInspection */
-		while (@ob_end_clean())
-		{
-			// Make sure no junk will come before out content – to the extent we have a say on this...
-		}
 
 		// Fix IE bugs
 		if ($app->client->engine == WebClient::TRIDENT)
@@ -605,8 +874,18 @@ class ItemModel extends BaseDatabaseModel
 		}
 
 		$this->logoutUser();
+
+		$app->close();
 	}
 
+	/**
+	 * Get the MIME type of a local file.
+	 *
+	 * @param   string  $filename  Absolute path to the file.
+	 *
+	 * @return  string
+	 * @since   7.0.0
+	 */
 	private function get_mime_type(string $filename): string
 	{
 		$type = function_exists('mime_content_type') ? @mime_content_type($filename) : false;
@@ -626,6 +905,7 @@ class ItemModel extends BaseDatabaseModel
 	 *
 	 * @return  string|null  The header value, NULL if not available
 	 * @link    https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Repr-Digest
+	 * @since   7.4.0
 	 */
 	private function getContentDigestHeaderValue(ItemTable $item): ?string
 	{
@@ -652,4 +932,33 @@ class ItemModel extends BaseDatabaseModel
 		return null;
 	}
 
+	/**
+	 * Get the MIME-type of an item given a Content-Type HTTP header.
+	 *
+	 * @param   string|null  $header
+	 *
+	 * @return  string|null
+	 * @since   7.4.0
+	 */
+	private function getMimeTypeFromContentTypeHeader(?string $header): ?string
+	{
+		$header = trim($header ?? '');
+
+		if (empty($header))
+		{
+			return null;
+		}
+
+		if (str_contains($header, ':'))
+		{
+			[, $header] = explode(':', $header, 2);
+		}
+
+		if (str_contains($header, ';'))
+		{
+			[$header, ] = explode(';', $header);
+		}
+
+		return trim($header);
+	}
 }

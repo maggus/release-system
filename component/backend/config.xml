@@ -125,6 +125,17 @@
             <option value="0">JNo</option>
             <option value="1">JYes</option>
         </field>
+
+        <field name="url_dl"
+               type="list"
+               default="temp"
+               label="COM_ARS_CONFIG_URL_DL_LABEL"
+               description="COM_ARS_CONFIG_URL_DL_DESC"
+        >
+            <option value="temp">COM_ARS_CONFIG_URL_DL_OPT_TEMP</option>
+            <option value="permanent">COM_ARS_CONFIG_URL_DL_OPT_PERMANENT</option>
+            <option value="proxy">COM_ARS_CONFIG_URL_DL_OPT_PROXY</option>
+        </field>
     </fieldset>
 
     <fieldset name="frontend" label="COM_ARS_CONFIG_FRONTEND_HEADER_LABEL"
