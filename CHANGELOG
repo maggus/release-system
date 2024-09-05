@@ -3,6 +3,7 @@ Akeeba Release System 7.4.0
 ================================================================================
 + Tags in Categories and Releases
 + Fields in Categories and Releases
++ Option to control logging [gh-234]
 
 Akeeba Release System 7.3.4
 ================================================================================

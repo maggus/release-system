@@ -59,7 +59,8 @@ class ItemController extends BaseController
 
 		try
 		{
-			$item = $this->accessControlItem($id, false);
+			$cParams = ComponentHelper::getParams('com_ars');
+			$item    = $this->accessControlItem($id, false);
 
 			$this->assertNotEmpty($item, 'Item not found or access denied');
 
@@ -80,14 +81,17 @@ class ItemController extends BaseController
 			]);
 
 			// Log the download
-			/** @var LogTable $log */
-			$log = $model->getTable('Log');
+			if ($cParams->get('log', 1))
+			{
+				/** @var LogTable $log */
+				$log = $model->getTable('Log');
 
-			$log->save([
-					'item_id'    => $id,
-					'authorized' => 1,
-				]
-			);
+				$log->save([
+						'item_id'    => $id,
+						'authorized' => 1,
+					]
+				);
+			}
 
 			// Download the item
 			$model->doDownload($item, $category);
@@ -145,32 +149,34 @@ class ItemController extends BaseController
 	 */
 	private function logFailedDownloadAttempt(int $id): void
 	{
-		$model = $this->getModel();
-		$log   = $model->getTable('Log');
+		$model   = $this->getModel();
+		$cParams = ComponentHelper::getParams('com_ars');
 
-		$log->save([
-				'item_id'    => $id,
-				'authorized' => 0,
-			]
-		);
-
-		$params = ComponentHelper::getParams('com_ars');
-
-		if (!$params->get('banUnauth', 0))
+		if ($cParams->get('log', 1))
 		{
-			return;
+			$log = $model->getTable('Log');
+			$log->save(
+				[
+					'item_id'    => $id,
+					'authorized' => 0,
+				]
+			);
 		}
 
-		$extraMessage = $id ? ('Item : ' . $id) : '';
+		if ($cParams->get('banUnauth', 0))
+		{
+			$extraMessage = $id ? ('Item : ' . $id) : '';
 
-		// Let's fire the system plugin event. If Admin Tools is installed, it will handle this and ban the user
-		$this->triggerPluginEvent('onAdminToolsThirdpartyException', [
-				'external',
-				Text::_('COM_ARS_BLOCKED_MESSAGE'),
-				[$extraMessage],
-				true,
-			]
-		);
+			// Let's fire the system plugin event. If Admin Tools is installed, it will handle this and ban the user
+			$this->triggerPluginEvent(
+				'onAdminToolsThirdpartyException', [
+					'external',
+					Text::_('COM_ARS_BLOCKED_MESSAGE'),
+					[$extraMessage],
+					true,
+				]
+			);
+		}
 	}
 
 }
