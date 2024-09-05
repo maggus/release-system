@@ -76,9 +76,10 @@ class ItemController extends BaseController
 			$model->preDownloadCheck($item, $category);
 
 			// Hit the item
-			$item->save([
-				'hits' => ++$item->hits,
-			]);
+			if ($cParams->get('hitcounting', 0))
+			{
+				$item->hit($item->getId());
+			}
 
 			// Log the download
 			if ($cParams->get('log', 1))
