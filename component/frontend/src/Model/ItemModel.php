@@ -89,20 +89,6 @@ class ItemModel extends BaseDatabaseModel
 		}
 	}
 
-	private function downloadLinkItem(ItemTable $item, CategoryTable $category): void
-	{
-		$app = Factory::getApplication();
-
-		if (@ob_get_length() !== false)
-		{
-			@ob_end_clean();
-		}
-
-		$this->logoutUser();
-
-		$app->redirect($item->url);
-	}
-
 	/**
 	 * Handle the requested download
 	 *
@@ -121,6 +107,234 @@ class ItemModel extends BaseDatabaseModel
 			default:
 				$this->downloadFileItem($item, $category);
 		}
+	}
+
+	/**
+	 * Formats a string to a valid Download ID format. If the string is not looking like a Download ID it will return
+	 * an empty string instead.
+	 *
+	 * @param   string|null  $dlid  The string to reformat.
+	 *
+	 * @return  string
+	 */
+	public function reformatDownloadID(?string $dlid): string
+	{
+		if (is_null($dlid))
+		{
+			return '';
+		}
+
+		$dlid = trim($dlid);
+
+		// Is the Download ID empty or too short?
+		if (empty($dlid) || (strlen($dlid) < 32))
+		{
+			return '';
+		}
+
+		// Do we have a userid:downloadid format?
+		$user_id = null;
+
+		if (strpos($dlid, ':') !== false)
+		{
+			$parts   = explode(':', $dlid, 2);
+			$user_id = max(0, (int) $parts[0]) ?: null;
+			$dlid    = rtrim($parts[1] ?? '');
+		}
+
+		if (empty($dlid))
+		{
+			return '';
+		}
+
+		// Trim the Download ID
+		if (strlen($dlid) > 32)
+		{
+			$dlid = substr($dlid, 0, 32);
+		}
+
+		return (is_null($user_id) ? '' : $user_id . ':') . $dlid;
+	}
+
+	/**
+	 * Gets the user associated with a specific Download ID
+	 *
+	 * @param   string|null  $downloadId  The Download ID to check
+	 *
+	 * @return  User  The user record of the corresponding user and the Download ID
+	 *
+	 * @throws  Exception  An exception is thrown if the Download ID is invalid or empty
+	 */
+	public function getUserFromDownloadID(?string $downloadId): User
+	{
+		// Reformat the Download ID
+		$downloadId = $this->reformatDownloadID($downloadId);
+
+		if (empty($downloadId))
+		{
+			throw new Exception('Invalid Download ID', 403);
+		}
+
+		// Do we have a userid:downloadid format?
+		$user_id = null;
+
+		if (strstr($downloadId, ':') !== false)
+		{
+			$parts      = explode(':', $downloadId, 2);
+			$user_id    = (int) $parts[0];
+			$downloadId = $parts[1];
+		}
+
+		$isPrimary = empty($user_id) ? 1 : 0;
+		$db        = $this->getDatabase();
+		$query     = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
+			->select('*')
+			->from($db->quoteName('#__ars_dlidlabels'))
+			->where($db->quoteName('dlid') . ' = :dlid')
+			->where($db->quoteName('primary') . ' = :isPrimary')
+			->where($db->quoteName('published') . ' = 1')
+			->bind(':isPrimary', $isPrimary, ParameterType::INTEGER)
+			->bind(':dlid', $downloadId, ParameterType::STRING);
+
+		if (!$isPrimary)
+		{
+			$query
+				->where($db->quoteName('user_id') . ' = :user_id')
+				->bind(':user_id', $user_id);
+		}
+
+		try
+		{
+			$matchingRecord = $db->setQuery($query)->loadObject() ?: null;
+
+			$this->assertNotEmpty($matchingRecord, 'Unknown Download ID');
+			$this->assertNotEmpty($matchingRecord->dlid ?? '', 'Invalid Download ID record');
+			$this->assert(empty($user_id) || ($user_id == ($matchingRecord->user_id ?? 0)), 'Invalid User ID');
+			$this->assert($downloadId == ($matchingRecord->dlid ?? ''), 'Invalid Download ID');
+
+		}
+		catch (Exception $e)
+		{
+			throw new Exception('Invalid Download ID', 403);
+		}
+
+		return Factory::getContainer()->get(UserFactoryInterface::class)->loadUserById($matchingRecord->user_id);
+	}
+
+	/**
+	 * Log in a user if necessary
+	 *
+	 * @return  boolean  True if a user was logged in
+	 */
+	public function loginUser(): bool
+	{
+		/** @var SiteApplication $app */
+		$app                     = Factory::getApplication();
+		$this->haveLoggedInAUser = false;
+
+		// No need to log in a user if the user is already logged in
+		if (!$app->getIdentity()->guest)
+		{
+			return false;
+		}
+
+		$dlid = $this->reformatDownloadID($app->input->getString('dlid', ''));
+
+		if (empty($dlid))
+		{
+			return false;
+		}
+
+		try
+		{
+			$user = $this->getUserFromDownloadID($dlid);
+		}
+		catch (Exception $exc)
+		{
+			$user = null;
+		}
+
+		if (empty($user) || empty($user->id) || $user->guest)
+		{
+			return false;
+		}
+
+		// Mark the user login so we can log him out later on
+		$this->haveLoggedInAUser = true;
+
+		// Get a fake login response
+		$options            = ['remember' => false];
+		$response           = new AuthenticationResponse();
+		$response->status   = Authentication::STATUS_SUCCESS;
+		$response->type     = 'downloadid';
+		$response->username = $user->username;
+		$response->email    = $user->email;
+		$response->fullname = $user->name;
+
+		// Run the login user events
+		PluginHelper::importPlugin('user');
+		$this->triggerPluginEvent('onLoginUser', [(array) $response, $options], null, $app);
+
+		// Set the user in the session, effectively logging in the user
+		$user = Factory::getContainer()->get(UserFactoryInterface::class)->loadUserByUsername($response->username);
+
+		$app->getSession()->set('user', $user);
+		$app->loadIdentity($user);
+
+		// Update the user's last visit time in the database
+		$user->setLastVisit(time());
+		$user->save();
+
+		return true;
+	}
+
+	/**
+	 * Log out the user who was logged in with the loginUser() method above
+	 *
+	 * @return  boolean  True if a user was logged out
+	 */
+	public function logoutUser(): bool
+	{
+		if (!$this->haveLoggedInAUser)
+		{
+			return false;
+		}
+
+		$app        = Factory::getApplication();
+		$user       = $app->getIdentity();
+		$options    = ['remember' => false];
+		$parameters = [
+			'username' => $user->username,
+			'id'       => $user->id,
+		];
+
+		// Set clientid in the options array if it hasn't been set already and shared sessions are not enabled.
+		if (!$app->get('shared_session', '0'))
+		{
+			$options['clientid'] = $app->getClientId();
+		}
+
+		$ret = $this->triggerPluginEvent('onUserLogout', [$parameters, $options], null, $app);
+
+		$haveLoggedOut = !in_array(false, $ret, true);
+
+		$this->haveLoggedInAUser = !$haveLoggedOut;
+
+		return $haveLoggedOut;
+	}
+
+	private function downloadLinkItem(ItemTable $item, CategoryTable $category): void
+	{
+		$app = Factory::getApplication();
+
+		if (@ob_get_length() !== false)
+		{
+			@ob_end_clean();
+		}
+
+		$this->logoutUser();
+
+		$app->redirect($item->url);
 	}
 
 	private function downloadFileItem(ItemTable $item, CategoryTable $category): void
@@ -238,7 +452,7 @@ class ItemModel extends BaseDatabaseModel
 		// Only guest downloads can be allowed to be cached
 		if ($cParams->get('allowcaching', 0) && $app->getIdentity()->guest)
 		{
-			$cacheTime = max(30, intval($cParams->get('caching_length', 864000)));
+			$cacheTime                = max(30, intval($cParams->get('caching_length', 864000)));
 			$headers['Cache-Control'] = 'public, max-age=' . $cacheTime;
 		}
 
@@ -391,221 +605,6 @@ class ItemModel extends BaseDatabaseModel
 		}
 
 		$this->logoutUser();
-	}
-
-	/**
-	 * Formats a string to a valid Download ID format. If the string is not looking like a Download ID it will return
-	 * an empty string instead.
-	 *
-	 * @param   string|null  $dlid  The string to reformat.
-	 *
-	 * @return  string
-	 */
-	public function reformatDownloadID(?string $dlid): string
-	{
-		if (is_null($dlid))
-		{
-			return '';
-		}
-
-		$dlid = trim($dlid);
-
-		// Is the Download ID empty or too short?
-		if (empty($dlid) || (strlen($dlid) < 32))
-		{
-			return '';
-		}
-
-		// Do we have a userid:downloadid format?
-		$user_id = null;
-
-		if (strpos($dlid, ':') !== false)
-		{
-			$parts   = explode(':', $dlid, 2);
-			$user_id = max(0, (int) $parts[0]) ?: null;
-			$dlid    = rtrim($parts[1] ?? '');
-		}
-
-		if (empty($dlid))
-		{
-			return '';
-		}
-
-		// Trim the Download ID
-		if (strlen($dlid) > 32)
-		{
-			$dlid = substr($dlid, 0, 32);
-		}
-
-		return (is_null($user_id) ? '' : $user_id . ':') . $dlid;
-	}
-
-	/**
-	 * Gets the user associated with a specific Download ID
-	 *
-	 * @param   string|null  $downloadId  The Download ID to check
-	 *
-	 * @return  User  The user record of the corresponding user and the Download ID
-	 *
-	 * @throws  Exception  An exception is thrown if the Download ID is invalid or empty
-	 */
-	public function getUserFromDownloadID(?string $downloadId): User
-	{
-		// Reformat the Download ID
-		$downloadId = $this->reformatDownloadID($downloadId);
-
-		if (empty($downloadId))
-		{
-			throw new Exception('Invalid Download ID', 403);
-		}
-
-		// Do we have a userid:downloadid format?
-		$user_id = null;
-
-		if (strstr($downloadId, ':') !== false)
-		{
-			$parts      = explode(':', $downloadId, 2);
-			$user_id    = (int) $parts[0];
-			$downloadId = $parts[1];
-		}
-
-		$isPrimary = empty($user_id) ? 1 : 0;
-		$db        = $this->getDatabase();
-		$query     = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
-			->select('*')
-			->from($db->quoteName('#__ars_dlidlabels'))
-			->where($db->quoteName('dlid') . ' = :dlid')
-			->where($db->quoteName('primary') . ' = :isPrimary')
-			->where($db->quoteName('published') . ' = 1')
-			->bind(':isPrimary', $isPrimary, ParameterType::INTEGER)
-			->bind(':dlid', $downloadId, ParameterType::STRING);
-
-		if (!$isPrimary)
-		{
-			$query
-				->where($db->quoteName('user_id') . ' = :user_id')
-				->bind(':user_id', $user_id);
-		}
-
-		try
-		{
-			$matchingRecord = $db->setQuery($query)->loadObject() ?: null;
-
-			$this->assertNotEmpty($matchingRecord, 'Unknown Download ID');
-			$this->assertNotEmpty($matchingRecord->dlid ?? '', 'Invalid Download ID record');
-			$this->assert(empty($user_id) || ($user_id == ($matchingRecord->user_id ?? 0)), 'Invalid User ID');
-			$this->assert($downloadId == ($matchingRecord->dlid ?? ''), 'Invalid Download ID');
-
-		}
-		catch (Exception $e)
-		{
-			throw new Exception('Invalid Download ID', 403);
-		}
-
-		return Factory::getContainer()->get(UserFactoryInterface::class)->loadUserById($matchingRecord->user_id);
-	}
-
-
-	/**
-	 * Log in a user if necessary
-	 *
-	 * @return  boolean  True if a user was logged in
-	 */
-	public function loginUser(): bool
-	{
-		/** @var SiteApplication $app */
-		$app                     = Factory::getApplication();
-		$this->haveLoggedInAUser = false;
-
-		// No need to log in a user if the user is already logged in
-		if (!$app->getIdentity()->guest)
-		{
-			return false;
-		}
-
-		$dlid = $this->reformatDownloadID($app->input->getString('dlid', ''));
-
-		if (empty($dlid))
-		{
-			return false;
-		}
-
-		try
-		{
-			$user = $this->getUserFromDownloadID($dlid);
-		}
-		catch (Exception $exc)
-		{
-			$user = null;
-		}
-
-		if (empty($user) || empty($user->id) || $user->guest)
-		{
-			return false;
-		}
-
-		// Mark the user login so we can log him out later on
-		$this->haveLoggedInAUser = true;
-
-		// Get a fake login response
-		$options            = ['remember' => false];
-		$response           = new AuthenticationResponse();
-		$response->status   = Authentication::STATUS_SUCCESS;
-		$response->type     = 'downloadid';
-		$response->username = $user->username;
-		$response->email    = $user->email;
-		$response->fullname = $user->name;
-
-		// Run the login user events
-		PluginHelper::importPlugin('user');
-		$this->triggerPluginEvent('onLoginUser', [(array) $response, $options], null, $app);
-
-		// Set the user in the session, effectively logging in the user
-		$user = Factory::getContainer()->get(UserFactoryInterface::class)->loadUserByUsername($response->username);
-
-		$app->getSession()->set('user', $user);
-		$app->loadIdentity($user);
-
-		// Update the user's last visit time in the database
-		$user->setLastVisit(time());
-		$user->save();
-
-		return true;
-	}
-
-	/**
-	 * Log out the user who was logged in with the loginUser() method above
-	 *
-	 * @return  boolean  True if a user was logged out
-	 */
-	public function logoutUser(): bool
-	{
-		if (!$this->haveLoggedInAUser)
-		{
-			return false;
-		}
-
-		$app        = Factory::getApplication();
-		$user       = $app->getIdentity();
-		$options    = ['remember' => false];
-		$parameters = [
-			'username' => $user->username,
-			'id'       => $user->id,
-		];
-
-		// Set clientid in the options array if it hasn't been set already and shared sessions are not enabled.
-		if (!$app->get('shared_session', '0'))
-		{
-			$options['clientid'] = $app->getClientId();
-		}
-
-		$ret = $this->triggerPluginEvent('onUserLogout', [$parameters, $options], null, $app);
-
-		$haveLoggedOut = !in_array(false, $ret, true);
-
-		$this->haveLoggedInAUser = !$haveLoggedOut;
-
-		return $haveLoggedOut;
 	}
 
 	private function get_mime_type(string $filename): string
