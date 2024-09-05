@@ -229,6 +229,12 @@ class ItemModel extends BaseDatabaseModel
 			'Content-Transfer-Encoding' => 'binary',
 		];
 
+		// Should I add a Content-Digest header?
+		if ($cParams->get('content_digest', 1) && $digest = $this->getContentDigestHeaderValue($item))
+		{
+			$headers['Content-Digest'] = $digest;
+		}
+
 		// Only guest downloads can be allowed to be cached
 		if ($cParams->get('allowcaching', 0) && $app->getIdentity()->guest)
 		{
@@ -613,4 +619,38 @@ class ItemModel extends BaseDatabaseModel
 
 		return $type;
 	}
+
+	/**
+	 * Returns the most secure item digest available in Content-Digest representation format.
+	 *
+	 * @param   ItemTable  $item  The item to calculate the Content-Digest header value for.
+	 *
+	 * @return  string|null  The header value, NULL if not available
+	 * @link    https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Repr-Digest
+	 */
+	private function getContentDigestHeaderValue(ItemTable $item): ?string
+	{
+		if (!empty($item->sha512))
+		{
+			return 'sha-512=:' . base64_encode(hex2bin($item->sha512)) . ':';
+		}
+
+		if (!empty($item->sha256))
+		{
+			return 'sha-256=:' . base64_encode(hex2bin($item->sha256)) . ':';
+		}
+
+		if (!empty($item->sha1))
+		{
+			return 'sha=:' . base64_encode(hex2bin($item->sha1)) . ':';
+		}
+
+		if (!empty($item->md5))
+		{
+			return 'md5=:' . base64_encode(hex2bin($item->md5)) . ':';
+		}
+
+		return null;
+	}
+
 }

@@ -6,6 +6,7 @@ Akeeba Release System 7.4.0
 + Option to control logging [gh-234]
 + Option to control item hit counting [gh-234]
 + Option to make public downloads cacheable
++ Add content digest to HTTP response [gh-236]
 
 Akeeba Release System 7.3.4
 ================================================================================
