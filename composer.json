@@ -15,6 +15,9 @@
 		"ext-json": "*",
 		"ext-simplexml": "*"
 	},
+	"suggest": {
+		"ext-fileinfo": "*"
+	},
 	"config": {
 		"platform": {
 			"php": "8.0.999"
