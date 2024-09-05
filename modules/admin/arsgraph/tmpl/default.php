@@ -16,12 +16,13 @@ use Joomla\Registry\Registry;
  * These variables are extracted from the indexed array returned by the
  * \Joomla\Module\Atsgraphs\Administrator\Dispatcher\Dispatcher::getLayoutData() method.
  *
- * @var stdClass                 $module   The module data loaded by Joomla
- * @var AdministratorApplication $app      The Joomla administrator application object
- * @var Input                    $input    The application input object
- * @var Registry                 $params   The module parameters
- * @var stdClass                 $template The current admin template
- * @var bool                     $hasArs   Is ARS installed and enabled?
+ * @var stdClass                 $module     The module data loaded by Joomla
+ * @var AdministratorApplication $app        The Joomla administrator application object
+ * @var Input                    $input      The application input object
+ * @var Registry                 $params     The module parameters
+ * @var stdClass                 $template   The current admin template
+ * @var bool                     $hasArs     Is ARS installed and enabled?
+ * @var bool                     $logEnabled Is logging enabled?
  *
  * @see \Joomla\Module\Atsgraphs\Administrator\Dispatcher\Dispatcher::getLayoutData()
  */
@@ -37,6 +38,16 @@ use Joomla\Registry\Registry;
 			<?= Text::_('MOD_ARSGRAPH_ERR_ARSMISSING_BODY') ?>
 		</p>
 	</div>
+<?php elseif (!$logEnabled): ?>
+		<div class="alert alert-danger">
+			<h3 class="alert-heading">
+				<span class="fa fa-circle-exclamation" aria-hidden="true"></span>
+				<?= Text::_('MOD_ARSGRAPH_LBL_NOLOG_HEAD') ?>
+			</h3>
+			<p>
+				<?= Text::_('MOD_ARSGRAPH_LBL_NOLOG_BODY') ?>
+			</p>
+		</div>
 <?php else: ?>
 	<div class="card">
 		<h3 class="card-header">

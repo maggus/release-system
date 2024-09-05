@@ -60,6 +60,18 @@ $userLayout = new FileLayout('akeeba.ars.common.user', JPATH_ADMINISTRATOR . '/c
 
 ?>
 
+<?php if ($cParams->get('log', 1) != 1): ?>
+<div class="alert alert-danger">
+	<h3 class="alert-heading">
+		<span class="fa fa-circle-exclamation" aria-hidden="true"></span>
+		<?= Text::_('COM_ARS_LOGS_LBL_NOLOG_HEAD') ?>
+	</h3>
+	<p>
+		<?= Text::_('COM_ARS_LOGS_LBL_NOLOG_BODY') ?>
+	</p>
+</div>
+<?php endif ?>
+
 <form action="<?= Route::_('index.php?option=com_ars&view=logs'); ?>"
 	  method="post" name="adminForm" id="adminForm">
 	<div class="row">

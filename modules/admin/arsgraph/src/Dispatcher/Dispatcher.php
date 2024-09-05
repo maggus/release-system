@@ -58,10 +58,13 @@ class Dispatcher extends AbstractModuleDispatcher
 
 	protected function getLayoutData()
 	{
-		$hasArs = $this->mvcFactory !== null;
+		$hasArs     = $this->mvcFactory !== null;
+		$logEnabled = false;
 
 		if ($hasArs)
 		{
+			$logEnabled = ComponentHelper::getParams('com_ars')->get('log', 1) == 1;
+
 			$this->app->getLanguage()->load('com_ars', JPATH_ADMINISTRATOR);
 
 			/** @var HtmlDocument $document */
@@ -95,7 +98,8 @@ class Dispatcher extends AbstractModuleDispatcher
 		return array_merge(
 			parent::getLayoutData(),
 			[
-				'hasArs' => $hasArs,
+				'hasArs'     => $hasArs,
+				'logEnabled' => $logEnabled,
 			]
 		);
 	}
