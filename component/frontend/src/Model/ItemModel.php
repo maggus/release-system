@@ -33,7 +33,8 @@ use Joomla\CMS\Uri\Uri;
 use Joomla\CMS\User\User;
 use Joomla\CMS\User\UserFactoryInterface;
 use Joomla\Database\ParameterType;
-use phpDocumentor\Reflection\PseudoTypes\IntegerValue;
+use Joomla\Http\Response;
+use Laminas\Diactoros\StreamFactory;
 use RuntimeException;
 
 #[AllowDynamicProperties]
@@ -363,12 +364,12 @@ class ItemModel extends BaseDatabaseModel
 		}
 
 		// Get the basic information of the file we need to download
-		$uri          = new Uri($item->url);
-		$header_file  = basename($uri->getPath());
-		$cacheId      = 'dl_' . sha1($header_file . '#:#' . $app->get('secret'));
+		$uri         = new Uri($item->url);
+		$header_file = basename($uri->getPath());
+		$cacheId     = 'dl_' . sha1($header_file . '#:#' . $app->get('secret'));
 
 		// Get the applicable cache time for the download item.
-		$cacheTime = (function() use ($cParams){
+		$cacheTime = (function () use ($cParams) {
 			// If caching of guest downloads is disabled use the hardcoded default of one hour.
 			if (!$cParams->get('allowcaching', 0))
 			{
@@ -394,22 +395,41 @@ class ItemModel extends BaseDatabaseModel
 			]
 		);
 
-		// Get a PSR-7 object for the remote item from the cache.
-		/** @var \Joomla\Http\Response $httpResponse */
-		$httpResponse = $cacheController->get(
-			fn(string $url) => HttpFactory::getHttp(['follow_location' => 1], ['curl', 'stream'])
-				->get($url),
+		// Get a cached object for the remote item from the cache.
+		$responseData = $cacheController->get(
+			function (string $url) {
+				// We cannot serialise a PSR-7 Response object, hence the need for this conversion.
+				$response = HttpFactory::getHttp(['follow_location' => 1], ['curl', 'stream'])
+					->get($url);
+
+				return (object) [
+					'body'       => $response->body ?? '',
+					'statusCode' => $response->getStatusCode() ?? 200,
+					'headers'    => $response->getHeaders() ?? [],
+				];
+			},
 			$item->url,
 			$cacheId
 		);
 
 		// If the download had failed, we throw an exception right away
-		if ($httpResponse->getStatusCode() !== 200)
+		if ($responseData->statusCode !== 200)
 		{
 			$cacheController->remove($cacheId, 'com_ars');
 
 			throw new RuntimeException('The download item is temporarily unavailable.');
 		}
+
+		// This converts the arbitrary object back to a PSR-7 Response object
+		$streamFactory = new StreamFactory;
+		$httpResponse  = new Response(
+			$streamFactory->createStream($responseData->body),
+			$responseData->statusCode,
+			$responseData->headers
+		);
+
+		// Now we can get rid of the memory hogging data. Bye-bye!
+		unset($responseData);
 
 		// Fix IE bugs
 		if ($app->client->engine == WebClient::TRIDENT)
@@ -904,8 +924,8 @@ class ItemModel extends BaseDatabaseModel
 	 * @param   ItemTable  $item  The item to calculate the Content-Digest header value for.
 	 *
 	 * @return  string|null  The header value, NULL if not available
-	 * @link    https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Repr-Digest
 	 * @since   7.4.0
+	 * @link    https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Repr-Digest
 	 */
 	private function getContentDigestHeaderValue(ItemTable $item): ?string
 	{
@@ -956,7 +976,7 @@ class ItemModel extends BaseDatabaseModel
 
 		if (str_contains($header, ';'))
 		{
-			[$header, ] = explode(';', $header);
+			[$header,] = explode(';', $header);
 		}
 
 		return trim($header);
