@@ -153,8 +153,9 @@ class HtmlView extends BaseHtmlView
 
 		// Pass page params
 		$this->pagination = $model->getPagination();
+		$this->pagination->setAdditionalUrlParam('Itemid', $this->Itemid);
+
 		$this->params     = $app->getParams();
-		$this->Itemid     = $app->input->getInt('Itemid', 0);
 		$this->menu       = $app->getMenu()->getActive();
 	}
 

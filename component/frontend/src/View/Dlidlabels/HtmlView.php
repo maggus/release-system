@@ -71,16 +71,26 @@ class HtmlView extends BaseHtmlView
 	 */
 	protected $state;
 
+	/**
+	 * The menu item ID
+	 *
+	 * @var   string|int
+	 * @since 7.4.0
+	 */
+	public $Itemid;
+
 	/** @inheritdoc */
 	public function display($tpl = null)
 	{
 		/** @var DlidlabelsModel $model */
 		$model               = $this->getModel();
 		$this->items         = $model->getItems();
-		$this->pagination    = $model->getPagination();
 		$this->state         = $model->getState();
 		$this->filterForm    = $model->getFilterForm();
 		$this->activeFilters = $model->getActiveFilters();
+		$this->pagination    = $model->getPagination();
+
+		$this->pagination->setAdditionalUrlParam('Itemid', $this->Itemid);
 
 		// Check for errors.
 		if (count($errors = $this->get('Errors')))

@@ -92,8 +92,12 @@ class HtmlView extends BaseHtmlView
 		$this->order     = $model->getState('list.order', 'id');
 		$this->order_Dir = $model->getState('list.direction', 'desc');
 
-		// Pass page params
+		// Fix pagination, broken in Joomla! 5.1.4 and 4.4.4
 		$this->pagination = $model->getPagination();
+		$this->pagination->setAdditionalUrlParam('category_id', $this->category->id);
+		$this->pagination->setAdditionalUrlParam('Itemid', $this->Itemid);
+
+		// Pass page params
 		$this->params     = $app->getParams();
 		$this->Itemid     = $app->input->getInt('Itemid', 0);
 		$this->menu       = $app->getMenu()->getActive();

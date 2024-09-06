@@ -8,6 +8,7 @@ Akeeba Release System 7.4.0
 + Option to make public downloads cacheable
 + Add content digest to HTTP response [gh-236]
 + Option to control URL downloads [gh-235]
+# [HIGH] Pagination was broken by Joomla! 5.1.3 and 4.4.7
 
 Akeeba Release System 7.3.4
 ================================================================================

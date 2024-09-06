@@ -100,6 +100,7 @@ class ItemsController extends BaseController
 		$view           = $this->getView('items', 'html');
 		$view->category = $category;
 		$view->release  = $release;
+		$view->Itemid   = $this->input->getInt('Itemid', 0);
 
 		$envModel = $this->getModel('Environments');
 		$view->setModel($envModel);

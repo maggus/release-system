@@ -99,6 +99,7 @@ class ReleasesController extends BaseController
 		/** @var \Akeeba\Component\ARS\Site\View\Releases\HtmlView $view */
 		$view           = $this->getView();
 		$view->category = $category;
+		$view->Itemid   = $this->input->get('Itemid', null, 'int');
 
 		$itemsModel = $this->getModel('Items', 'Site', ['ignore_request' => true]);
 		$view->setModel($itemsModel, false);
