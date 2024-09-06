@@ -154,6 +154,11 @@ class Router extends RouterView
 		$queryItemId = $query['Itemid'] ?? null;
 		$queryItemId = ($queryItemId !== null) ? intval($queryItemId) : null;
 
+		if (in_array($query['task'] ?? '', ['main', 'default']))
+		{
+			unset($query['task']);
+		}
+
 		/**
 		 * Joomla 4 always adds the current (or default) menu item's Itemid. We need to remove it when it's not the
 		 * right Item ID to use for the URL.
