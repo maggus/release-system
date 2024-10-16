@@ -9,16 +9,17 @@ namespace Akeeba\Component\ARS\Administrator\Table;
 
 defined('_JEXEC') or die;
 
+use Akeeba\Component\ARS\Administrator\Mixin\EnsureUcmTrait;
 use Akeeba\Component\ARS\Administrator\Mixin\TableAssertionTrait;
 use Akeeba\Component\ARS\Administrator\Mixin\TableColumnAliasTrait;
 use Akeeba\Component\ARS\Administrator\Mixin\TableCreateModifyTrait;
 use Joomla\CMS\Application\ApplicationHelper;
 use Joomla\CMS\Factory;
 use Joomla\CMS\Filter\InputFilter;
-use Joomla\Database\DatabaseDriver;
-use Akeeba\Component\ARS\Administrator\Mixin\EnsureUcmTrait;
 use Joomla\CMS\Tag\TaggableTableInterface;
 use Joomla\CMS\Tag\TaggableTableTrait;
+use Joomla\Database\DatabaseDriver;
+use Joomla\Event\Event;
 
 /**
  * ARS Releases table
@@ -52,14 +53,6 @@ class ReleaseTable extends AbstractTable implements TaggableTableInterface
 	use EnsureUcmTrait;
 
 	/**
-	 * Indicates that columns fully support the NULL value in the database
-	 *
-	 * @var    boolean
-	 * @since  7.0.0
-	 */
-	protected $_supportNullValue = false;
-
-	/**
 	 * Used internally by Joomla! to manage tags.
 	 *
 	 * @var   null|array
@@ -74,6 +67,14 @@ class ReleaseTable extends AbstractTable implements TaggableTableInterface
 	 * @since  7.4.0
 	 */
 	public $typeAlias = 'com_ars.release';
+
+	/**
+	 * Indicates that columns fully support the NULL value in the database
+	 *
+	 * @var    boolean
+	 * @since  7.0.0
+	 */
+	protected $_supportNullValue = false;
 
 	public function __construct(DatabaseDriver $db)
 	{
@@ -102,6 +103,77 @@ class ReleaseTable extends AbstractTable implements TaggableTableInterface
 	}
 
 	/**
+	 * Performs some evil voodoo to work around a baffling issue I discovered.
+	 *
+	 * After enabling the taggable behaviour the BleedingEdge releases stopped working.
+	 *
+	 * The problem comes from the Taggable behaviour handling onTableBeforeStore in
+	 * \Joomla\Plugin\Behaviour\Taggable\Extension\Taggable::onTableBeforeStore. Debugging it I can see that it calls
+	 * \Joomla\CMS\Helper\TagsHelper::preStoreProcess which creates a clone of this table object, then calls reset() on
+	 * the clone. The original table's properties remain unchanged, EXCEPT FOR the category_id column which becomes
+	 * NULL. For the life of me, I cannot understand why category_id is being reset on both the original table, and the
+	 * clone. I suspect something, somehow is being passed by reference, but I don't know where.
+	 *
+	 * Instead of spending several hair-pulling, profanity-filled hours with a dubious result I decided to invoke the
+	 * Dark Arts and work around the issue with the elegance of taking a sledgehammer to it. It's crude, but it bloody
+	 * works!
+	 *
+	 * The idea is simple. The whole problem happens because of the taggable behaviour's
+	 * \Joomla\Plugin\Behaviour\Taggable\Extension\Taggable::onTableBeforeStore. This is what calls the TagsHelper which
+	 * triggers the weird problem. I do not have another event in the table object to hook into before Joomla! tries to
+	 * write anything to the database. Therefore, I need to create a TEMPORARY event handler for onTableBeforeStore
+	 * which will be called AFTER the Taggable one and which will restore the category ID. We do that with the
+	 * combination of our trusted onBeforeStore and onAfterStore methods.
+	 *
+	 * onBeforeStore caches the category ID after casting it into a string and concatenating it with a marker. This
+	 * ensures that if there was any by-reference passing it will break, as we force the PHP engine to create a new
+	 * string out of the value. It also caches the SPL object hash of the table we are working on, just in case we fail
+	 * to clean up and end up running our temporary handler outside the intended context.
+	 *
+	 * The handler, voodooOnBeforeStore, makes sure we are processing the onTableBeforeStore event of the very same
+	 * table object it was created for by checking the SPL object hash. It will then read the cached voodoo value of the
+	 * category_id, cast it back to an int or null, and assign it to the (original) table's category_id, thus bypassing
+	 * the issue caused by the taggable behaviour.
+	 *
+	 * onAfterStore will kick in after storing the database record to remove the cached voodoo values and remove the
+	 * temporary voodooOnBeforeStore event handler from the events dispatcher object, thereby cleaning up.
+	 *
+	 * And yet, this convoluted method was far more efficient than trying to figure out WTF is actually going on.
+	 *
+	 * It's not stupid if it works. Right?
+	 *
+	 * @param   Event  $e
+	 *
+	 * @return  void
+	 * @see     self::onBeforeStore()
+	 * @see     self::onAfterStore()
+	 */
+	public function voodooOnBeforeStore(Event $e)
+	{
+		if ($e->getName() !== 'onTableBeforeStore')
+		{
+			return;
+		}
+
+		[$subject, $updateNulls, $k] = array_values($e->getArguments());
+
+		if (!$subject instanceof ReleaseTable)
+		{
+			return;
+		}
+
+		if (spl_object_hash($subject) !== $this->_voodoo_hash)
+		{
+			return;
+		}
+
+		$voodooValue = substr($this->_voodoo_category_id, 7);
+		$voodooValue = empty($voodooValue) ? null : intval($voodooValue);
+
+		$subject->category_id = $voodooValue;
+	}
+
+	/**
 	 * Runs after loading a record from the database
 	 *
 	 * @param   bool   $result  Did the record load?
@@ -121,6 +193,34 @@ class ReleaseTable extends AbstractTable implements TaggableTableInterface
 		}
 	}
 
+	/**
+	 * Part of the evil voodoo.
+	 *
+	 * @return  void
+	 * @see     self::voodooOnBeforeStore()
+	 */
+	protected function onBeforeStore()
+	{
+		$this->_voodoo_category_id = 'VOODOO:' . (string) ($this->category_id ?? '');
+		$this->_voodoo_hash        = spl_object_hash($this);
+
+		$this->getDispatcher()->addListener('onTableBeforeStore', [$this, 'voodooOnBeforeStore']);
+	}
+
+	/**
+	 * Part of the evil voodoo.
+	 *
+	 * @return  void
+	 * @see     self::voodooOnBeforeStore()
+	 */
+	protected function onAfterStore()
+	{
+		unset ($this->_voodoo_category_id);
+		unset ($this->_voodoo_hash);
+
+		$this->getDispatcher()->removeListener('onTableAfterStore', [$this, 'voodooOnBeforeStore']);
+	}
+
 	protected function onBeforeCheck()
 	{
 		$this->assertNotEmpty($this->category_id, 'COM_ARS_RELEASE_ERR_NEEDS_CATEGORY');
@@ -138,10 +238,12 @@ class ReleaseTable extends AbstractTable implements TaggableTableInterface
 		// Check alias for uniqueness
 		$db    = $this->getDbo();
 		$query = (method_exists($db, 'createQuery') ? $db->createQuery() : $db->getQuery(true))
-			->select([
-				$db->quoteName('alias'),
-				$db->quoteName('version'),
-			])
+			->select(
+				[
+					$db->quoteName('alias'),
+					$db->quoteName('version'),
+				]
+			)
 			->from($db->quoteName('#__ars_releases'))
 			->where($db->quoteName('category_id') . ' = :catid')
 			->bind(':catid', $this->category_id);
@@ -154,7 +256,9 @@ class ReleaseTable extends AbstractTable implements TaggableTableInterface
 
 		$existingItems = $db->setQuery($query)->loadAssocList('alias', 'version');
 
-		$this->assertNotInArray($this->version, array_values($existingItems), 'COM_ARS_RELEASE_ERR_NEEDS_VERSION_UNIQUE');
+		$this->assertNotInArray(
+			$this->version, array_values($existingItems), 'COM_ARS_RELEASE_ERR_NEEDS_VERSION_UNIQUE'
+		);
 
 		$this->assertNotInArray($this->alias, array_keys($existingItems), 'COM_ARS_RELEASE_ERR_NEEDS_ALIAS_UNIQUE');
 

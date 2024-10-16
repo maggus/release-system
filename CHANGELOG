@@ -1,4 +1,8 @@
 <?php die(); ?>
+Akeeba Release System 7.4.1
+================================================================================
+# [HIGH] BleedingEdge releases were broken
+
 Akeeba Release System 7.4.0
 ================================================================================
 + Tags in Categories and Releases
