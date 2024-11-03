@@ -83,7 +83,8 @@ class ReleaseTable extends AbstractTable implements TaggableTableInterface
 		$this->setColumnAlias('catid', 'category_id');
 		$this->setColumnAlias('title', 'version');
 
-		$this->created_by = Factory::getApplication()->getIdentity()->id;
+		$user             = Factory::getApplication()->getIdentity();
+		$this->created_by = $user?->id;
 		$this->created    = Factory::getDate()->toSql();
 		$this->access     = 1;
 	}
@@ -162,7 +163,7 @@ class ReleaseTable extends AbstractTable implements TaggableTableInterface
 			return;
 		}
 
-		if (spl_object_hash($subject) !== $this->_voodoo_hash)
+		if (spl_object_hash($subject) !== ($this->_voodoo_hash ?? null))
 		{
 			return;
 		}

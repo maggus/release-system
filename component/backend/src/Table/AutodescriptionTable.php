@@ -58,7 +58,7 @@ class AutodescriptionTable extends AbstractTable
 
 		$this->setColumnAlias('catid', 'category');
 
-		$this->created_by = Factory::getApplication()->getIdentity()->id;
+		$this->created_by = Factory::getApplication()->getIdentity()?->id;
 		$this->created    = Factory::getDate()->toSql();
 	}
 

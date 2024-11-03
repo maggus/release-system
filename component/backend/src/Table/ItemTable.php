@@ -76,7 +76,7 @@ class ItemTable extends AbstractTable
 
 		$this->setColumnAlias('catid', 'release_id');
 
-		$this->created_by = Factory::getApplication()->getIdentity()->id;
+		$this->created_by = Factory::getApplication()->getIdentity()?->id;
 		$this->created    = Factory::getDate()->toSql();
 		$this->access     = 1;
 	}
@@ -303,7 +303,7 @@ class ItemTable extends AbstractTable
 		$this->redirect_unauth   = $this->redirect_unauth ?: $auto->redirect_unauth ;
 
 		// Apply description, if necessary
-		$stripDesc = trim(strip_tags($this->description));
+		$stripDesc = trim(strip_tags($this->description ?? ''));
 
 		if (empty($this->description) || empty($stripDesc))
 		{

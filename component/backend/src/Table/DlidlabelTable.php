@@ -53,7 +53,7 @@ class DlidlabelTable extends AbstractTable
 	{
 		parent::__construct('#__ars_dlidlabels', ['id'], $db);
 
-		$this->created_by = Factory::getApplication()->getIdentity()->id;
+		$this->created_by = Factory::getApplication()->getIdentity()?->id;
 		$this->created    = Factory::getDate()->toSql();
 	}
 
@@ -68,7 +68,7 @@ class DlidlabelTable extends AbstractTable
 		}
 
 		// If no user_id is selected use the current user's ID.
-		$this->user_id = $this->user_id ?: Factory::getApplication()->getIdentity()->id;
+		$this->user_id = $this->user_id ?: Factory::getApplication()->getIdentity()?->id;
 
 		// Make sure the user_id points to a valid user record
 		$user = Factory::getContainer()->get(UserFactoryInterface::class)->loadUserById($this->user_id);

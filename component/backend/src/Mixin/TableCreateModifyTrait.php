@@ -66,7 +66,7 @@ trait TableCreateModifyTrait
 			// Field created_by can be set by the user, so we don't touch it if it's set.
 			if ($this->updateCreated && $this->hasField('created_by') && empty($this->created_by))
 			{
-				$this->created_by = $user->id;
+				$this->created_by = $user?->id;
 			}
 
 			// Set modified to created date if not set

@@ -50,7 +50,7 @@ class UpdatestreamTable extends AbstractTable
 
 		$this->setColumnAlias('title', 'name');
 
-		$this->created_by = Factory::getApplication()->getIdentity()->id;
+		$this->created_by = Factory::getApplication()->getIdentity()?->id;
 		$this->created    = Factory::getDate()->toSql();
 	}
 

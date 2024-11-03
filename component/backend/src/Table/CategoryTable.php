@@ -82,7 +82,7 @@ class CategoryTable extends AbstractTable implements TaggableTableInterface
 	{
 		parent::__construct('#__ars_categories', 'id', $db);
 
-		$this->created_by = Factory::getApplication()->getIdentity()->id;
+		$this->created_by = Factory::getApplication()->getIdentity()?->id;
 		$this->created    = Factory::getDate()->toSql();
 		$this->access     = 1;
 	}
