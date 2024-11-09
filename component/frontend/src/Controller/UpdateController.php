@@ -99,7 +99,7 @@ class UpdateController extends BaseController
 	 */
 	public function stream(): void
 	{
-		$id = $this->input->getInt('id', 0);
+		$id = $this->input->getInt('stream_id', 0);
 
 		if ($id == 0)
 		{
